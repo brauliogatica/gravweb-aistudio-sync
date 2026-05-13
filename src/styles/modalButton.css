@@ -1,0 +1,12 @@
+.informationButton{
+    position: fixed;
+    top: 0px; 
+    right: 0px; 
+    z-index: 9999;
+}
+.buttonModal{
+    position: fixed;
+    margin-left: -55px;
+    margin-top: 5px;
+    border-radius: 5px;
+}

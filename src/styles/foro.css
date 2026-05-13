@@ -1,0 +1,45 @@
+.nuevo-aporte{
+    display: flex;
+    gap: 20px;
+    padding: 20px; 
+     width: 100%;
+     background: #F1F2F7;
+}
+.foro-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+
+  
+  .aportes-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100%, 1fr)); /* Cambiar min-width a 100% */
+
+    padding: 50px;
+    background-image: url("../assets/fondoCarousel.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    gap: 20px;
+    background-attachment: fixed;
+  }
+  
+  .aporte-card {
+    height: 300px; /* Altura fija para las tarjetas */
+    overflow-y: auto; /* Agregar scroll si el contenido excede la altura */
+  }
+.MuiInputBase-input.MuiOutlinedInput-input.css-1t8l2tu-MuiInputBase-input-MuiOutlinedInput-input{
+    background: white;
+  }
+  .comentarios{
+    display: flex;
+    gap: 20px;
+  }
+  .MuiPaper-root.MuiPaper-elevation.MuiPaper-rounded.MuiPaper-elevation1.MuiCard-root.aporte-card.css-bhp9pd-MuiPaper-root-MuiCard-root{
+    overflow-y: scroll;
+    scrollbar-color: rgba(207, 187, 187, 0.5) rgba(238, 215, 215, 0);
+    scrollbar-width: thin;
+    height: 300px;
+  }

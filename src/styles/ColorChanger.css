@@ -1,0 +1,42 @@
+.color-changer-button {
+    position: fixed;
+    bottom: 50px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background-color: #3C74C3; /* Color de fondo del botón */
+    border-radius: 50%; /* Para que sea redondo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: #ffffff; /* Color del ícono */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Sombra */
+    z-index: 999; /* Asegura que esté sobre otros elementos */
+  }
+  
+  .options {
+    position: absolute;
+    bottom: 60px; /* Distancia desde el botón principal */
+    right: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .options button {
+    width: 50px;
+    height: 50px;
+    background-color: #3C74C3;
+    border: none;
+    border-radius: 50%;
+    color: #ffffff;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  
+  .options button:hover {
+    background-color: #67C87F; /* Color de fondo al pasar el cursor */
+  }
+  .color-changer-button:hover {
+    background-color: #67C87F;
+  }

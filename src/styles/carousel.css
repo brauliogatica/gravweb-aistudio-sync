@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+.componenteCarouselInterior{
+    border-style: solid;
+    border-radius: 20px;
+    border-color: #dcedf745;
+    height: 85%;
+    width: 80%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #d7e4ed2b;
+}
+.componenteInterior{
+ width: 100%;
+ justify-content: center;
+    display: flex;
+}
+.LogoBlanco{
+    width:33%;
+    text-align: center;
+    max-width: 200px; 
+}
+.divVertical{
+    width: 100%;
+}
+
+.carousel {
+    text-align: center;
+    margin-top:1%;
+    display: flex;
+    overflow: hidden;
+    
+  }
+  .imgCarousel{
+    max-width: 100%;
+    background-color: white;
+    padding: 1%;
+    border-radius: 10px;
+  }
+  
+  .slide {
+    flex: 0 0 100%;
+  }
+  
+  .navigation {
+    text-align: center;
+  }
+  
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: transparent;
+    border-radius: 50%;
+    margin: 0 5px;
+    cursor: pointer;
+    border-style: solid;
+    border-color: #05385D;
+    border-width: 1px;
+  }
+  
+  .dot.active {
+    background-color: #05385D;
+  }
+  h4{
+    font-size: 1.5em; 
+    margin: 0; 
+    text-align: center!important;
+    color: #063E5F!important;
+    font-family: "Montserrat", sans-serif;
+  }
+  .cssp{
+    font-size: 1em; 
+    margin: 0; 
+    font-family: "Montserrat", sans-serif;
+    height: 50px;
+    text-align: center;
+   padding-left: 20%;
+   padding-right: 20%;
+    color: #063E5F;
+    font-weight: 600;
+  }

@@ -2,33 +2,50 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Gravweb V1 Hello World
+# Gravweb AI Studio Sync
 
-V1 minima de Gravweb compatible con AI Studio para validar el ciclo de desarrollo:
+Repositorio puente para la migracion iterativa de la Plataforma Gravitacional:
 AI Studio -> GitHub -> Codex -> entorno local.
 
-View your app in AI Studio: https://ai.studio/apps/e3ec915b-f763-4f03-a37e-a3d6f06f5bd4
+La raiz del proyecto contiene la V2 minima:
 
-## Run Locally
+- `/analisis`: seleccion de terreno con navbar, herramientas y flujo de poligono.
+- `/particles`: terreno demo migrado con carga lazy.
+- `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
 
-**Prerequisites:** Node.js
+## Reglas De Intercambio
 
-1. Install dependencies:
+No subir:
+
+- `node_modules/`
+- `.git/`
+- `dist/`
+- `.env` o secretos reales
+- zips, logs o datos multimedia gigantes
+
+Si AI Studio necesita abrir la app sin claves, la pantalla de analisis usa un modo local de respaldo. Para activar Google Maps real, configurar una clave publica restringida:
+
+```bash
+VITE_GOOGLE_MAPS_API_KEY=
+```
+
+## Uso Local
 
 ```bash
 npm install
-```
-
-2. Run the app:
-
-```bash
 npm run dev
+npm run build
+npm run lint
+npm audit
 ```
 
-3. Build for production:
+## Variables Publicas
+
+Usar solo variables `VITE_*` en archivos locales `.env` no versionados:
 
 ```bash
-npm run build
+VITE_GOOGLE_MAPS_API_KEY=
+VITE_API_BASE_URL=
+VITE_RHINO_COMPUTE_URL=
+VITE_MAX_AREA=10000
 ```
-
-No environment variables or API keys are required for V1.

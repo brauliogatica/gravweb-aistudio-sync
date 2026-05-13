@@ -1,0 +1,19 @@
+{
+    "listas": {
+        "Proyección meteorologica para evento maximo": [
+            "P=27.32(mm)",
+            "I=53.47(mm/hr)",
+            "Q=0.51(m3/s)"
+        ],
+        "Volumen Potencial ": [
+            "V=998.(m3)"
+        ],
+        "datos": [
+            "Área=16.1há"
+        ]
+    },
+    "metadatos": {
+        "total_listas": 3,
+        "fecha_generacion": "03/07/2025 00:00:00"
+    }
+}

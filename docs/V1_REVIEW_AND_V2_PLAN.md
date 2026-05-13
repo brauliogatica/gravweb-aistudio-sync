@@ -51,6 +51,16 @@ of Gravweb. The scope must stay narrow:
 - No Auth0 client secret in source.
 - No heavy data unless it is lazy-loaded from `public/demo` or a local API.
 
+Status:
+
+- V2 now lives in the repository root.
+- `/analisis` and `/particles` are wired.
+- The original migrated components were copied into `src`.
+- The terrain demo data is loaded from `public/demo`.
+- Google Maps is still optional through `VITE_GOOGLE_MAPS_API_KEY`.
+- When no Google key exists, `/analisis` falls back to a local mode that keeps the
+  polygon test flow functional.
+
 ## Recommended V2 structure
 
 ```text

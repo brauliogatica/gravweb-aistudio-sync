@@ -1,0 +1,34 @@
+/* .list-group-item{
+    margin: 10px;
+    border-radius: 10px;
+}
+
+.list-group-item.selected{
+    background-color: #3C74C3;
+    color: white;
+    font-weight: bold;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.container-fluid {
+    height: 100vh; 
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    flex: 1; 
+}
+
+.col-md-3, .col-md-9 {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important; 
+} */

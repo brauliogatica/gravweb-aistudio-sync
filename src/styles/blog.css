@@ -1,0 +1,75 @@
+.MuiButtonBase-root.MuiButton-root.MuiButton-text.MuiButton-textPrimary.MuiButton-sizeMedium.MuiButton-textSizeMedium.MuiButton-colorPrimary.MuiButton-root.MuiButton-text.MuiButton-textPrimary.MuiButton-sizeMedium.MuiButton-textSizeMedium.MuiButton-colorPrimary.new-post-btn.css-1e6y48t-MuiButtonBase-root-MuiButton-root{
+    background: #3C74C3;
+    color:white;
+  }
+  .button-container{
+    display: flex;
+    gap: 20px;
+  }
+  .miPerfil{
+    background-color: #3C74C3;
+    color: white;
+    border-radius: 5px;
+    border-style: none;
+  }
+ /* Estilos para el contenedor principal del feed */
+.feed-container {
+    margin: 20px auto; /* Margen para centrar el contenido */
+    max-width: 1200px; /* Ancho máximo del contenedor */
+    padding-top: 150px;
+  }
+  
+  /* Estilos para el contenedor del slider */
+  .slider-container {
+    background: #F1F2F7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 15px;
+    position: absolute;
+    width: 100%;
+    margin-top: -20px;
+  }
+  
+  /* Estilos para el contenedor del slider de historias */
+  .story-slider {
+    display: flex; /* Mostrar las imágenes en línea */
+    align-items: center; /* Alinear verticalmente al centro */
+  }
+  
+  /* Estilos para las imágenes del slider */
+  .story-slider img {
+    width: 80px; /* Tamaño de las imágenes */
+    height: 80px;
+    border-radius: 50%; /* Forma circular */
+    margin-right: 10px; /* Espacio entre imágenes */
+  }
+  
+  /* Estilos para el contenedor del botón de nueva publicación */
+  .button-container {
+    margin-left: auto; /* Mover el botón a la derecha */
+  }
+  .css-bhp9pd-MuiPaper-root-MuiCard-root {
+    height: 600px;
+  }
+  .css-o69gx8-MuiCardMedia-root {
+    height: 400px;
+  }
+  .MuiCardContent-root.css-46bh2p-MuiCardContent-root{
+    display: block;
+    margin: auto;
+    text-align: justify;
+  }
+.blog-container{
+    background-image: url("../assets/fondoCarousel.jpg");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-attachment: fixed;
+}
+.rounded-circle2{
+    position: absolute;
+    margin-top: -30px;
+    width: 50px;
+}

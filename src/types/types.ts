@@ -1,0 +1,57 @@
+export interface AuthResponse {
+  body: {
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
+export interface AuthResponseError {
+  body: {
+    error: string;
+  };
+}
+
+export interface User {
+  _id: string;
+  username: string;
+  email: string;
+}
+
+export interface AccessTokenResponse {
+  statusCode: number;
+  body: {
+    accessToken: string;
+  };
+  error?: string;
+}
+
+export interface Coordinate {
+  lat: number;
+  lng: number;
+}
+
+export interface Project {
+  _id?: string;
+  name: string;
+  description: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  coordinates: Coordinate[];
+  coordinatesCenter: Coordinate;
+  thumbnail: string;
+  lineas: any;
+  malla: any;
+  laderas: any;
+  suelos: any;
+  matriz: any;
+  arJson: any;
+  genJson: any;
+  lineasJson: any;
+  objectsJson: any;
+  lineasAzulesJson: any;
+  lineasAmarillasJson: any;
+  listasJson: any;
+  areaTerrenoM2: number;
+}

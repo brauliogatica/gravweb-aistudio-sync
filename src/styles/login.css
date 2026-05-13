@@ -1,0 +1,35 @@
+
+.componenteLogin{
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    background: #F1F2F7;
+}
+
+.componenteInputs{
+    width: 50%;
+}
+
+.componenteCarousel{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    margin: 1%;
+    border-radius: 20px;
+}
+
+@media screen and (max-width: 900px) {
+    .componenteLogin{
+        display: block;
+    }
+    .componenteCarousel{
+        width: 100%;
+    }
+    .componenteInputs{
+        width: 100%;
+    }
+
+}

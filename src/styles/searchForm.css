@@ -1,0 +1,6 @@
+.form-group{
+    position: fixed;
+    bottom: 0px;
+    left: 100px;
+    z-index: 1000;
+}

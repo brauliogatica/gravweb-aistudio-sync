@@ -1,0 +1,206 @@
+html,
+body {
+  margin: 0px;
+  overflow-x: hidden;
+}
+
+/* #settings {
+  position: fixed;
+  top: 16px;
+  right: 46px;
+  width: 300px;
+  padding: 30px;
+  border-radius: 12px;
+
+  color: black;
+  font-family: "Quicksand", sans-serif;
+
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+#centered-container {
+  text-align: center;
+}
+
+#map {
+  height: 175px;
+}
+
+#map-container {
+  padding: 10px;
+}
+
+input {
+  padding: 5px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+label {
+  padding: 5px;
+  display: block;
+}
+
+button {
+  padding: 5px;
+  margin: 5px;
+  cursor: pointer;
+  background: white;
+  border: 3px solid white;
+  box-sizing: border-box;
+  border-radius: 4px;
+  color: #000;
+}
+
+button:hover {
+  border: 3px solid #c3c1c1;
+}
+
+button[disabled] {
+  background-color: #c3c1c1;
+  cursor: not-allowed;
+  border: 3px solid transparent;
+}
+
+button[disabled]:hover {
+  border: 3px solid transparent;
+}
+
+.settings-link {
+  color: white;
+  padding: 10px;
+}
+
+.log {
+  padding: 5px;
+  overflow-y: auto;
+  max-height: 100px;
+  display: none;
+  word-wrap: break-word;
+  text-wrap: balance;
+}
+
+
+#instructions {
+  display: none;
+  font-family: Quicksand;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  color: white;
+  background-color: #0A88F6;
+  padding: 10px;
+  border-radius: 10px;
+  transform: translate(-50%, -50%);
+  max-width: 350px;
+}
+
+#instructions a {
+  color: white;
+}
+
+#instructions li {
+  margin-bottom: 4px;
+}
+
+#fetch-tiles-instruction-text {
+  color: black;
+  background-color: white;
+  border-radius: 4px;
+  padding: 3px;
+}
+
+#debug-slider-container {
+  display: none;
+}
+
+#logoGrav {
+  display: flex;
+  justify-content: center;
+}
+
+#logoGrav img {
+  width: 100%;
+}
+
+#canvas-visor-3d {
+  background: linear-gradient(#A3D6E0, white);
+}
+.btn.btn-primary.my-1{
+  width: 100%;
+}
+
+input{
+  width: 100%;
+}
+.botonesMod{
+  display: flex;
+  gap: 10px;
+  
+}
+.btn.btn-primary.my-1{
+  background-color: #0A88F6;
+}
+.botonesMod .btn.btn-primary.my-1{
+  font-size: small;
+ 
+} */
+
+#loader{
+  position: absolute;
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#loader img{
+  /* width: 200px; */
+  height: 200px;
+}
+
+#isotipo-loader{
+  animation: palpitar 1s ease-in-out infinite;
+}
+
+@keyframes palpitar{
+  0%{transform: scale(1);}
+  50%{transform: scale(1.1);}
+  100%{transform: scale(1);}
+}
+
+#containerGeneral{
+  display: flex;
+}
+
+.full-width {
+  width: 100%;
+  opacity: 1;
+}
+
+.hidden {
+  width: 0;
+  opacity: 0;
+}
+
+.secciones{
+  transition: width 1s, opacity 1s;
+  min-width: 0;
+}
+
+.analisis-buttons{
+  display: flex;
+  gap: 20px;
+  padding: 10px;
+}
+
+.herramientas-buttons{
+  display: flex;
+  gap: 20px;
+}
+
+.compute-buttons{
+  display: flex;
+}

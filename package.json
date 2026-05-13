@@ -1,19 +1,34 @@
 {
   "name": "gravweb-aistudio-sync",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host=0.0.0.0",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1"
+    "@fortawesome/fontawesome-free": "^6.5.2",
+    "@reduxjs/toolkit": "^2.3.0",
+    "axios": "^1.7.2",
+    "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
+    "echarts": "^5.6.0",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-redux": "^8.1.3",
+    "react-router-dom": "^6.22.3",
+    "three": "^0.162.0"
   },
   "devDependencies": {
+    "@types/file-saver": "^2.0.7",
+    "@types/node": "^22.14.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "~5.8.2",
     "vite": "^8.0.12"
