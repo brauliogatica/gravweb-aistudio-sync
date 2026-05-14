@@ -1,6 +1,5 @@
 const RHINO_COMPUTE_URL =
   import.meta.env.VITE_RHINO_COMPUTE_URL?.trim().replace(/\/+$/, "") ?? "";
-const RHINO_COMPUTE_KEY = import.meta.env.VITE_RHINO_COMPUTE_KEY?.trim() ?? "";
 
 export interface GrasshopperRequest {
   definition: string;
@@ -13,10 +12,6 @@ const baseHeaders: Record<string, string> = {
 };
 
 function getHeaders(extraHeaders?: Record<string, string>) {
-  if (RHINO_COMPUTE_KEY) {
-    baseHeaders.RhinoComputeKey = RHINO_COMPUTE_KEY;
-  }
-
   return { ...baseHeaders, ...extraHeaders };
 }
 
