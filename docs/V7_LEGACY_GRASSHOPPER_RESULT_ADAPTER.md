@@ -48,6 +48,12 @@ En `/particles`:
 2. `Procesar con Grasshopper` llama `/io`, toma `CacheKey`, llama `/grasshopper` con el poligono guardado y aplica las salidas legacy.
 3. `Cargar terreno demo` sigue disponible como baseline manual.
 
+## Ajustes de compatibilidad
+
+- El poligono se cierra antes de enviarse a Grasshopper.
+- El solve usa `pointer` devuelto por `/io` y no envia `filename`, igual que el cuerpo legacy validado.
+- Si `/grasshopper` responde error, la UI muestra el inicio del cuerpo de respuesta para poder diagnosticar desde AI Studio.
+
 ## Nota sobre peso
 
 La respuesta de `/grasshopper` puede ser pesada. El adaptador no la sube a GitHub ni la guarda en archivos; solo la aplica en memoria de Redux durante la sesion.

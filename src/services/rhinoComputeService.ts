@@ -187,7 +187,12 @@ export async function solveTerrainWithGrasshopper(
   const durationMs = Math.round(performance.now() - startedAt);
 
   if (!response.ok) {
-    throw new Error(`Rhino /grasshopper respondio con ${response.status}.`);
+    throw new Error(
+      `Rhino /grasshopper respondio con ${response.status}. ${responseText.slice(
+        0,
+        500
+      )}`
+    );
   }
 
   const grasshopperResponse = JSON.parse(responseText);
@@ -226,7 +231,7 @@ function buildLegacySolveBody(
   request: ProcessingRequest,
   project: Project
 ) {
-  const coordinates = request.polygon;
+  const coordinates = closeTerrainPolygon(request.polygon);
   const coordinatesCenter =
     request.centroid ?? project.coordinatesCenter ?? coordinates[0];
 
@@ -236,7 +241,6 @@ function buildLegacySolveBody(
     modelunits: ioContent.modelunits ?? "Meters",
     dataversion: ioContent.dataversion ?? 8,
     algo: null,
-    filename: ioContent.filename,
     pointer,
     cachesolve: true,
     values: [
@@ -258,6 +262,32 @@ function buildLegacySolveBody(
     warnings: [],
     errors: [],
   };
+}
+
+function closeTerrainPolygon(points: ProcessingRequest["polygon"]) {
+  const coordinates = points
+    .filter(
+      (point) =>
+        Number.isFinite(point.lat) &&
+        Number.isFinite(point.lng)
+    )
+    .map((point) => ({ lat: point.lat, lng: point.lng }));
+
+  if (coordinates.length < 3) {
+    throw new Error("El poligono necesita al menos 3 puntos validos.");
+  }
+
+  const first = coordinates[0];
+  const last = coordinates[coordinates.length - 1];
+  const isClosed =
+    Math.abs(first.lat - last.lat) < 0.0000001 &&
+    Math.abs(first.lng - last.lng) < 0.0000001;
+
+  if (!isClosed) {
+    coordinates.push({ ...first });
+  }
+
+  return coordinates;
 }
 
 function ghString(paramName: string, value: string) {
