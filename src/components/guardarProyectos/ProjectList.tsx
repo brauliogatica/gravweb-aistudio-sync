@@ -78,7 +78,7 @@ const ProjectList: React.FC = () => {
     setSelectedProject(null);
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',

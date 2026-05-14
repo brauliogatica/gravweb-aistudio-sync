@@ -75,8 +75,8 @@ export interface Project {
   name: string;
   description: string;
   userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string | Date;
+  updatedAt: string | Date;
   coordinates: Coordinate[];
   coordinatesCenter: Coordinate;
   thumbnail: string;

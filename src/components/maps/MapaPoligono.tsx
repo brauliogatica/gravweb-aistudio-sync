@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "../../styles/layout.css";
 import { calcularCentroide } from "../googleEarth/puntos";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,6 +14,7 @@ import {
 } from "../../services/processingRequestService";
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
+const GOOGLE_MAPS_SCRIPT_ID = "gravweb-google-maps-js";
 const DEFAULT_MAX_AREA_HECTARES = 100;
 const MAX_AREA_HECTARES = Number(
   import.meta.env.VITE_MAX_AREA_HECTARES ?? DEFAULT_MAX_AREA_HECTARES
@@ -29,6 +30,11 @@ interface MapaPoligonoProps {
 
 const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   const navigate = useNavigate();
+  const mapRef = useRef<any>(null);
+  const boundsRef = useRef<any>(null);
+  const pathsRef = useRef<any[]>([]);
+  const isValidRef = useRef(false);
+  const selectedPolygonRef = useRef<any>(null);
 
   const handleButtonProcesar = () => {
     setActiveTab("herramienta3");
@@ -51,6 +57,41 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     : DEFAULT_MAX_AREA_HECTARES * 10000;
   const [areaTerrenoM2, setAreaTerrenoM2] = useState(null);
   var isValid = false;
+
+  const extractPolygonCoordinates = (polygon: any) => {
+    if (!polygon?.getPath) return [];
+    return polygon
+      .getPath()
+      .getArray()
+      .map((point: any) => ({ lat: point.lat(), lng: point.lng() }));
+  };
+
+  const syncSelectedPolygon = () => {
+    const polygon = selectedPolygonRef.current;
+    if (!polygon || !window.google?.maps?.geometry) {
+      return pathsRef.current[0] ?? Paths[0] ?? [];
+    }
+
+    const coordinates = extractPolygonCoordinates(polygon);
+    const area = window.google.maps.geometry.spherical.computeArea(
+      polygon.getPath()
+    );
+    const valid = area <= maxArea;
+
+    sessionStorage.setItem("areaSelec", String(area));
+    isValid = valid;
+    isValidRef.current = valid;
+    Paths = [coordinates];
+    pathsRef.current = Paths;
+    setPolygonPaths([coordinates]);
+    polygon.setOptions({
+      fillColor: valid ? "#BCDCF9" : "#fb0000",
+      strokeColor: valid ? "#57ACF9" : "#fb0000",
+    });
+
+    return coordinates;
+  };
+
   const centroInicio = { lat: -36.418858, lng: -72.51649 };
   const coordenadasPrueba = [
     { lat: -36.414751, lng: -72.511329 },
@@ -73,19 +114,23 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     { lat: -36.414751, lng: -72.511329 },
   ];
 
-  // const script = document.createElement("script");
-  // // Asigna la URL de la API de Google Maps a la variable src del elemento script
-  // script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&callback=initMap&libraries=drawing,places,geometry&v=weekly`;
-  // script.async = true;
-  // document.body.appendChild(script);
-
   useEffect(() => {
     if (!MAPS_API_KEY) {
       return;
     }
 
+    let cancelled = false;
+
     // Define initMap en el contexto global
     (window as any).initMap = () => {
+      if (cancelled) return;
+
+      Paths = [];
+      pathsRef.current = [];
+      isValid = false;
+      isValidRef.current = false;
+      selectedPolygonRef.current = null;
+
       // Inicializa el mapa aquí
       map = new google.maps.Map(document.getElementById("map") as HTMLElement, {
         center: centroInicio,
@@ -108,7 +153,9 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
         fullscreenControl: false,
         gestureHandling: "greedy",
       });
+      mapRef.current = map;
       bounds = new window.google.maps.LatLngBounds();
+      boundsRef.current = bounds;
       // Create the initial InfoWindow.
       let infoWindow = new window.google.maps.InfoWindow({
         content: "Comience a dibujar su polígono",
@@ -129,11 +176,8 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
         );
         infoWindow.open(map);
 
-        const punto = mapsMouseEvent.latLng.toJSON();
-        Paths.push(punto);
-
-        // Actualizar el estado con los nuevos Paths
-        setPolygonPaths([...Paths]);
+        // El poligono procesable se captura desde DrawingManager.
+        // No guardamos clicks sueltos para evitar procesar solo un punto.
       });
 
       //Enviar polígono para su procesamiento
@@ -143,12 +187,16 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
         "Click para procesar el polígono",
         'Procesar el terreno <i class="bi bi-cloud-upload-fill fa-2x"></i>',
         () => {
-          if (isValid) {
-            console.log(Paths);
+          const coordinates = syncSelectedPolygon();
+
+          if (isValidRef.current && coordinates?.length >= 3) {
+            console.log("Procesando poligono", coordinates);
 
             // Se procesan las coordenadas del polígono
-            procesarCoordenadas(Paths[0]);
+            procesarCoordenadas(coordinates);
 
+          } else if (!coordinates?.length) {
+            alert("Selecciona un poligono antes de procesar el terreno");
           } else {
             alert(`El poligono debe ser menor o igual a ${m2ToHa(maxArea)} hectareas`);
           }
@@ -388,7 +436,10 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
                 path.push(p);
               })
             );
-            Paths.push(path);
+            selectedPolygonRef.current = event.overlay;
+            Paths = [path];
+            pathsRef.current = Paths;
+            setPolygonPaths([path]);
 
             //console.log(window.google.maps.geometry.spherical.computeArea(event.overlay.getPath()));
             var area = window.google.maps.geometry.spherical.computeArea(
@@ -397,38 +448,25 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
             sessionStorage.setItem("areaSelec", area);
             if (area > maxArea) {
               isValid = false;
+              isValidRef.current = false;
               event.overlay.setOptions({
                 fillColor: "#fb0000",
                 strokeColor: "#fb0000",
               });
             } else {
               isValid = true;
+              isValidRef.current = true;
               event.overlay.setOptions({
                 fillColor: "#BCDCF9",
                 strokeColor: "#57ACF9",
               });
             }
             event.overlay.getPaths().forEach(function (path, index) {
-              path.addListener("set_at", function () {
-                var _area = window.google.maps.geometry.spherical.computeArea(
-                  event.overlay.getPath()
-                );
-                sessionStorage.setItem("areaSelec", _area);
-                if (_area > maxArea) {
-                  isValid = false;
-                  event.overlay.setOptions({
-                    fillColor: "##fb0000",
-                    strokeColor: "#fb0000",
-                  });
-                } else {
-                  isValid = true;
-                  event.overlay.setOptions({
-                    fillColor: "#BCDCF9",
-                    strokeColor: "#57ACF9",
-                  });
-                }
-              });
+              path.addListener("set_at", syncSelectedPolygon);
+              path.addListener("insert_at", syncSelectedPolygon);
+              path.addListener("remove_at", syncSelectedPolygon);
             });
+            event.overlay.addListener("dragend", syncSelectedPolygon);
           } else {
             event.overlay.setMap(null);
           }
@@ -436,46 +474,58 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       );
 
       drawingManager.setMap(map);
+
+      setTimeout(() => {
+        const input = document.getElementById("pac-input") as HTMLInputElement;
+        const activeMap = mapRef.current;
+        if (input && activeMap && window.google?.maps?.places) {
+          const autocomplete = new window.google.maps.places.Autocomplete(input, {
+            types: [],
+          });
+          autocomplete.bindTo("bounds", activeMap);
+
+          autocomplete.addListener("place_changed", () => {
+            const place = autocomplete.getPlace();
+            if (!place.geometry || !place.geometry.location) return;
+
+            activeMap.panTo(place.geometry.location);
+            activeMap.setZoom(14);
+
+            new window.google.maps.Marker({
+              map: activeMap,
+              position: place.geometry.location,
+            });
+          });
+        }
+      }, 0);
     };
 
     // Cargar el script de Google Maps
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&callback=initMap&libraries=drawing,places,geometry&v=weekly`;
-    script.async = true;
-    script.onerror = () => {
-      console.error("No se pudo cargar Google Maps. Revisa VITE_GOOGLE_MAPS_API_KEY.");
-    };
-    document.body.appendChild(script);
+    const startMap = () => (window as any).initMap?.();
+    const existingScript = document.getElementById(
+      GOOGLE_MAPS_SCRIPT_ID
+    ) as HTMLScriptElement | null;
 
-    // Buscador de lugares
-    setTimeout(() => {
-      const input = document.getElementById("pac-input") as HTMLInputElement;
-      if (input && window.google && window.google.maps.places) {
-        const autocomplete = new window.google.maps.places.Autocomplete(input, {
-          types: [], // Cambiar a [] para permitir todo tipo de lugares
-        });
-        autocomplete.bindTo("bounds", map);
-
-        autocomplete.addListener("place_changed", () => {
-          const place = autocomplete.getPlace();
-          if (!place.geometry || !place.geometry.location) return;
-
-          map.panTo(place.geometry.location);
-          map.setZoom(14);
-
-          // Opcional: agregar un marcador
-          new window.google.maps.Marker({
-            map,
-            position: place.geometry.location,
-          });
-        });
-      }
-    }, 1000); // Espera breve para asegurar que el mapa y el input existan
+    if (window.google?.maps?.drawing) {
+      startMap();
+    } else if (existingScript) {
+      existingScript.addEventListener("load", startMap, { once: true });
+    } else {
+      const script = document.createElement("script");
+      script.id = GOOGLE_MAPS_SCRIPT_ID;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&libraries=drawing,places,geometry&v=weekly&loading=async`;
+      script.async = true;
+      script.defer = true;
+      script.onload = startMap;
+      script.onerror = () => {
+        console.error("No se pudo cargar Google Maps. Revisa VITE_GOOGLE_MAPS_API_KEY.");
+      };
+      document.head.appendChild(script);
+    }
 
     return () => {
       // Limpia la función global al desmontar el componente
-      delete (window as any).initMap;
-      script.remove();
+      cancelled = true;
     };
   }, []);
 
@@ -930,7 +980,9 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       { lat: -36.414751, lng: -72.511329 }, // Cierra el polígono
     ];
 
-    if (!MAPS_API_KEY || !window.google || !map) {
+    const activeMap = mapRef.current;
+
+    if (!MAPS_API_KEY || !window.google || !activeMap) {
       sessionStorage.setItem("areaSelec", "12400000");
       procesarCoordenadas(coordenadas, "demo-polygon", "demo-ready");
       return;
@@ -947,18 +999,24 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       draggable: true,
     });
 
-    polygon.setMap(map!);
+    polygon.setMap(activeMap);
+
+    const demoBounds = new google.maps.LatLngBounds();
+    boundsRef.current = demoBounds;
 
     for (let i = 0; i < coordenadas.length; i++) {
       let latLng = new google.maps.LatLng(
         coordenadas[i].lat,
         coordenadas[i].lng
       );
-      bounds?.extend(latLng);
+      demoBounds.extend(latLng);
     }
 
     isValid = true;
-    map!.fitBounds(bounds!);
+    isValidRef.current = true;
+    selectedPolygonRef.current = polygon;
+    pathsRef.current = [coordenadas];
+    activeMap.fitBounds(demoBounds);
 
     let area = window.google.maps.geometry.spherical.computeArea(
       polygon.getPath()
