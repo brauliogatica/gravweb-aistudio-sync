@@ -13,6 +13,7 @@ La raiz del proyecto contiene la V2 minima:
 - `/particles`: terreno demo migrado con carga lazy.
 - `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
 - V4 agrega un adaptador no bloqueante para un procesador local futuro.
+- V5 agrega un backend local minimo en `local-processor/`.
 
 ## Reglas De Intercambio
 
@@ -35,6 +36,7 @@ VITE_GOOGLE_MAPS_API_KEY=
 ```bash
 npm install
 npm run dev
+npm run processor:dev
 npm run build
 npm run lint
 npm audit
@@ -58,3 +60,15 @@ VITE_MAX_AREA=10000
 - `POST /process-terrain`
 
 Si no esta configurado, la app conserva el fallback del terreno demo.
+
+Para probar el procesador local V5:
+
+```bash
+npm run processor:dev
+```
+
+Luego usar en `.env` local:
+
+```bash
+VITE_LOCAL_PROCESSOR_URL=http://127.0.0.1:8787
+```
