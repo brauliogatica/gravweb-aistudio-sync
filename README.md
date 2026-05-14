@@ -57,6 +57,7 @@ Usar solo variables `VITE_*` en archivos locales `.env` no versionados:
 VITE_GOOGLE_MAPS_API_KEY=
 VITE_API_BASE_URL=
 VITE_RHINO_COMPUTE_URL=
+VITE_RHINO_COMPUTE_KEY=
 VITE_LOCAL_PROCESSOR_URL=
 VITE_MAX_AREA=10000
 ```
@@ -67,6 +68,14 @@ VITE_MAX_AREA=10000
 - `POST /process-terrain`
 
 Si no esta configurado, la app conserva el fallback del terreno demo.
+
+Para probar Rhino Compute directo desde AI Studio durante desarrollo:
+
+```bash
+VITE_RHINO_COMPUTE_URL=https://migration-postcards-warner-cheers.trycloudflare.com
+```
+
+La URL debe responder `GET /health`, `POST /io` y `POST /grasshopper`.
 
 Para probar el procesador local V5:
 
