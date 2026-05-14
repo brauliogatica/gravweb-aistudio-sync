@@ -12,6 +12,7 @@ La raiz del proyecto contiene la V2 minima:
 - `/analisis`: seleccion de terreno con navbar, herramientas y flujo de poligono.
 - `/particles`: terreno demo migrado con carga lazy.
 - `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
+- V4 agrega un adaptador no bloqueante para un procesador local futuro.
 
 ## Reglas De Intercambio
 
@@ -47,5 +48,13 @@ Usar solo variables `VITE_*` en archivos locales `.env` no versionados:
 VITE_GOOGLE_MAPS_API_KEY=
 VITE_API_BASE_URL=
 VITE_RHINO_COMPUTE_URL=
+VITE_LOCAL_PROCESSOR_URL=
 VITE_MAX_AREA=10000
 ```
+
+`VITE_LOCAL_PROCESSOR_URL` queda reservado para un servicio local con:
+
+- `GET /health`
+- `POST /process-terrain`
+
+Si no esta configurado, la app conserva el fallback del terreno demo.

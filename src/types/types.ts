@@ -58,6 +58,18 @@ export interface ProcessingRequest {
   status: ProcessingRequestStatus;
 }
 
+export interface LocalProcessorHealth {
+  available: boolean;
+  status?: string;
+  message?: string;
+}
+
+export interface LocalProcessorResponse {
+  ok: boolean;
+  jobId?: string;
+  message?: string;
+}
+
 export interface Project {
   _id?: string;
   name: string;
