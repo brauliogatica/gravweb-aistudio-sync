@@ -39,6 +39,14 @@ loadProcessingRequest()
 clearProcessingRequest()
 ```
 
+## Estado Implementado
+
+- `TerrainPoint` y `ProcessingRequest` viven en `src/types/types.ts`.
+- El servicio transitorio vive en `src/services/processingRequestService.ts`.
+- `MapaPoligono` guarda un request antes de navegar a `/particles`.
+- `TerrenoDemoPage` lee el request y muestra un HUD de estado.
+- Si no existe `VITE_LOCAL_PROCESSOR_URL`, se mantiene el fallback al terreno demo.
+
 ## Seguridad
 
 - El frontend solo puede usar variables publicas `VITE_*`.

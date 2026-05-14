@@ -7,6 +7,10 @@ import { RootState } from "../../redux/store/store";
 import { updateProject } from "../../redux/slices/projectSlice";
 import JSZip from "jszip";
 import ImportarDatos from "../manejarDatos/ImportarDatos";
+import {
+  createProcessingRequest,
+  saveProcessingRequest,
+} from "../../services/processingRequestService";
 
 const MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
@@ -34,6 +38,26 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   const [areaTerrenoM2, setAreaTerrenoM2] = useState(null);
   var isValid = false;
   const centroInicio = { lat: -36.418858, lng: -72.51649 };
+  const coordenadasPrueba = [
+    { lat: -36.414751, lng: -72.511329 },
+    { lat: -36.415254, lng: -72.512766 },
+    { lat: -36.415266, lng: -72.514048 },
+    { lat: -36.41583, lng: -72.515521 },
+    { lat: -36.415858, lng: -72.516124 },
+    { lat: -36.416431, lng: -72.518011 },
+    { lat: -36.416573, lng: -72.51895 },
+    { lat: -36.416403, lng: -72.519597 },
+    { lat: -36.416389, lng: -72.521145 },
+    { lat: -36.418564, lng: -72.521567 },
+    { lat: -36.420214, lng: -72.521722 },
+    { lat: -36.421316, lng: -72.520872 },
+    { lat: -36.422568, lng: -72.519273 },
+    { lat: -36.422834, lng: -72.517201 },
+    { lat: -36.420746, lng: -72.512437 },
+    { lat: -36.418379, lng: -72.511805 },
+    { lat: -36.417377, lng: -72.511321 },
+    { lat: -36.414751, lng: -72.511329 },
+  ];
 
   // const script = document.createElement("script");
   // // Asigna la URL de la API de Google Maps a la variable src del elemento script
@@ -884,6 +908,12 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       { lat: -36.414751, lng: -72.511329 }, // Cierra el polígono
     ];
 
+    if (!MAPS_API_KEY || !window.google || !map) {
+      sessionStorage.setItem("areaSelec", "12400000");
+      procesarCoordenadas(coordenadas, "demo-polygon", "demo-ready");
+      return;
+    }
+
     let polygon = new google.maps.Polygon({
       paths: coordenadas,
       fillColor: "#BCDCF9",
@@ -924,6 +954,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
 
     // Si quieres, puedes llamar a generarMiniatura aquí:
     generarMiniatura([coordenadas]);
+    persistProcessingRequest(coordenadas, "demo-polygon", "demo-ready");
 
     // Y actualizar el proyecto en redux:
     dispatch(updateProject({ key: "coordinates", value: coordenadas }));
@@ -998,6 +1029,25 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     return (m2 / 10000).toFixed(2);
   }
 
+  const persistProcessingRequest = (
+    coordenadas: any[],
+    source = "manual-polygon",
+    status = "queued"
+  ) => {
+    const centroid = calcularCentroide(coordenadas);
+    const rawArea = Number(sessionStorage.getItem("areaSelec") || "0");
+    const areaM2 = Number.isFinite(rawArea) && rawArea > 0 ? rawArea : undefined;
+    const request = createProcessingRequest({
+      source,
+      polygon: coordenadas.map(({ lat, lng }) => ({ lat, lng })),
+      centroid,
+      areaM2,
+      status,
+    });
+    saveProcessingRequest(request);
+    return request;
+  };
+
   function generateKmlFromPolygon(coordinates: any[]) {
     const coordsString = coordinates.map(c => `${c.lng},${c.lat},0`).join(' ');
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1033,7 +1083,11 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     URL.revokeObjectURL(url);
   }
 
-  const procesarCoordenadas = (coordenadas: any) => {
+  const procesarCoordenadas = (
+    coordenadas: any,
+    source = "manual-polygon",
+    status = "queued"
+  ) => {
     sessionStorage.setItem("coordenadas", JSON.stringify(coordenadas));
     const centroide = calcularCentroide(coordenadas);
     sessionStorage.setItem("centroide", JSON.stringify(centroide));
@@ -1041,7 +1095,9 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     const areaSelec = sessionStorage.getItem("areaSelec");
     const areaDecimales = parseFloat(areaSelec || "0").toFixed(2);
 
-    dispatch(updateProject({ key: "coordinates", value: sessionStorage.getItem("coordenadas") }));
+    persistProcessingRequest(coordenadas, source, status);
+
+    dispatch(updateProject({ key: "coordinates", value: coordenadas }));
     dispatch(updateProject({ key: "coordinatesCenter", value: centroide }));
 
     alert(

@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
     REACT_APP_EOS_API_KEY: "",
     REACT_APP_OPENTOPOGRAPHY_API_KEY: "",
     REACT_APP_MAX_AREA: env.VITE_MAX_AREA ?? "10000",
+    REACT_APP_LOCAL_PROCESSOR_URL: env.VITE_LOCAL_PROCESSOR_URL ?? "",
   };
 
   return {

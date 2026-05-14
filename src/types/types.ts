@@ -31,6 +31,33 @@ export interface Coordinate {
   lng: number;
 }
 
+export interface TerrainPoint {
+  lat: number;
+  lng: number;
+}
+
+export type ProcessingRequestSource =
+  | "manual-polygon"
+  | "demo-polygon"
+  | "imported-file";
+
+export type ProcessingRequestStatus =
+  | "draft"
+  | "queued"
+  | "processing"
+  | "demo-ready"
+  | "failed";
+
+export interface ProcessingRequest {
+  id: string;
+  source: ProcessingRequestSource;
+  createdAt: string;
+  polygon: TerrainPoint[];
+  centroid?: TerrainPoint;
+  areaM2?: number;
+  status: ProcessingRequestStatus;
+}
+
 export interface Project {
   _id?: string;
   name: string;

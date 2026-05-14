@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import WaterParticle from "../components/waterParticles/WaterParticle";
 import { RootState } from "../redux/store/store";
 import { loadDemoProjectData } from "../services/demoProjectLoader";
+import { loadProcessingRequest } from "../services/processingRequestService";
+import type { ProcessingRequest } from "../types/types";
 
 const hasData = (value: unknown) => {
   if (!value) return false;
@@ -15,12 +17,16 @@ const hasData = (value: unknown) => {
 function TerrenoDemoPage() {
   const dispatch = useDispatch();
   const project = useSelector((state: RootState) => state.project);
+  const [processingRequest, setProcessingRequest] =
+    useState<ProcessingRequest | null>(null);
   const [ready, setReady] = useState(
     hasData(project.genJson) && hasData(project.lineasJson)
   );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setProcessingRequest(loadProcessingRequest());
+
     if (hasData(project.genJson) && hasData(project.lineasJson)) {
       setReady(true);
       return;
@@ -42,7 +48,73 @@ function TerrenoDemoPage() {
     return <div className="text-white p-4">Cargando terreno demo...</div>;
   }
 
-  return <WaterParticle />;
+  return (
+    <>
+      <ProcessingRequestHud request={processingRequest} />
+      <WaterParticle />
+    </>
+  );
+}
+
+const sourceLabels: Record<ProcessingRequest["source"], string> = {
+  "manual-polygon": "Polígono manual",
+  "demo-polygon": "Polígono demo",
+  "imported-file": "Archivo importado",
+};
+
+function ProcessingRequestHud({
+  request,
+}: {
+  request: ProcessingRequest | null;
+}) {
+  const localProcessorUrl = process.env.REACT_APP_LOCAL_PROCESSOR_URL;
+  const shouldWarn =
+    request &&
+    request.source !== "demo-polygon" &&
+    !localProcessorUrl;
+
+  return (
+    <aside
+      style={{
+        position: "fixed",
+        top: 86,
+        left: 222,
+        zIndex: 20,
+        maxWidth: 390,
+        border: "1px solid rgba(125, 211, 252, 0.28)",
+        borderRadius: 8,
+        background: "rgba(6, 11, 25, 0.82)",
+        color: "#f8fafc",
+        padding: "12px 14px",
+        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.25)",
+        fontSize: 13,
+        lineHeight: 1.45,
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      <strong style={{ display: "block", marginBottom: 6 }}>
+        Solicitud de procesamiento
+      </strong>
+      {request ? (
+        <>
+          <div>ID: {request.id}</div>
+          <div>Origen: {sourceLabels[request.source]}</div>
+          <div>Estado: {request.status}</div>
+          <div>Puntos: {request.polygon.length}</div>
+          {typeof request.areaM2 === "number" && (
+            <div>Área: {(request.areaM2 / 10000).toFixed(2)} ha</div>
+          )}
+          {shouldWarn && (
+            <div style={{ marginTop: 8, color: "#fde68a" }}>
+              Procesador local no detectado. Cargando terreno demo por defecto.
+            </div>
+          )}
+        </>
+      ) : (
+        <div>Sin solicitud activa. Cargando terreno demo por defecto.</div>
+      )}
+    </aside>
+  );
 }
 
 export default TerrenoDemoPage;
