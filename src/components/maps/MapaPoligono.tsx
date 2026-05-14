@@ -122,8 +122,32 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     let cancelled = false;
 
     // Define initMap en el contexto global
-    (window as any).initMap = () => {
+    (window as any).initMap = async () => {
       if (cancelled) return;
+
+      if (window.google?.maps?.importLibrary) {
+        const [mapsLibrary] = await Promise.all([
+          window.google.maps.importLibrary("maps"),
+          window.google.maps.importLibrary("drawing"),
+          window.google.maps.importLibrary("places"),
+          window.google.maps.importLibrary("geometry"),
+        ]);
+        if (mapsLibrary?.Map) {
+          window.google.maps.Map = mapsLibrary.Map;
+        }
+        if (mapsLibrary?.InfoWindow) {
+          window.google.maps.InfoWindow = mapsLibrary.InfoWindow;
+        }
+        if (mapsLibrary?.LatLngBounds) {
+          window.google.maps.LatLngBounds = mapsLibrary.LatLngBounds;
+        }
+        if (cancelled) return;
+      }
+
+      if (typeof window.google?.maps?.Map !== "function") {
+        console.error("Google Maps no cargo la libreria maps.");
+        return;
+      }
 
       Paths = [];
       pathsRef.current = [];
@@ -495,12 +519,14 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     };
 
     // Cargar el script de Google Maps
-    const startMap = () => (window as any).initMap?.();
+    const startMap = () => {
+      void (window as any).initMap?.();
+    };
     const existingScript = document.getElementById(
       GOOGLE_MAPS_SCRIPT_ID
     ) as HTMLScriptElement | null;
 
-    if (window.google?.maps?.drawing) {
+    if (window.google?.maps?.importLibrary) {
       startMap();
     } else if (existingScript) {
       existingScript.addEventListener("load", startMap, { once: true });
