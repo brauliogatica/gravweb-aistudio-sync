@@ -14,6 +14,8 @@ La raiz del proyecto contiene la V2 minima:
 - `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
 - V4 agrega un adaptador no bloqueante para un procesador local futuro.
 - V5 agrega un backend local minimo en `local-processor/`.
+- Los datos demo de `public/demo` se guardan como `*.json.gz` para reducir
+  el peso de AI Studio; el loader los descomprime en el navegador.
 
 ## Reglas De Intercambio
 
@@ -23,6 +25,7 @@ No subir:
 - `.git/`
 - `dist/`
 - `.env` o secretos reales
+- JSON demo crudos si ya existe su version `*.json.gz`
 - zips, logs o datos multimedia gigantes
 
 Si AI Studio necesita abrir la app sin claves, la pantalla de analisis usa un modo local de respaldo. Para activar Google Maps real, configurar una clave publica restringida:
