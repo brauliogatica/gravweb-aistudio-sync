@@ -4,8 +4,8 @@ import './TutorialMapa.css'; // Opcional: para estilos personalizados
 const TutorialMapa: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [dontShowAgain, setDontShowAgain] = useState(false);
-    const maxAreaM2 = Number(import.meta.env.VITE_MAX_AREA ?? 10000);
-    const maxAreaHa = ((Number.isFinite(maxAreaM2) ? maxAreaM2 : 10000) / 10000).toFixed(2);
+    const maxAreaHaValue = Number(import.meta.env.VITE_MAX_AREA_HECTARES ?? 100);
+    const maxAreaHa = (Number.isFinite(maxAreaHaValue) ? maxAreaHaValue : 100).toFixed(2);
 
     useEffect(() => {
         const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');

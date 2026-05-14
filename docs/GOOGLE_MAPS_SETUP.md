@@ -12,7 +12,7 @@ En desarrollo local puede ir en un archivo `.env.local` no versionado:
 ```bash
 VITE_GOOGLE_MAPS_API_KEY=tu_api_key_publica_de_google_maps
 VITE_LOCAL_PROCESSOR_URL=http://127.0.0.1:8787
-VITE_MAX_AREA=10000
+VITE_MAX_AREA_HECTARES=100
 ```
 
 ## APIs De Google Necesarias

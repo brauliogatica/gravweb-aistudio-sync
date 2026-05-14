@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import "../../styles/layout.css";
 import { calcularCentroide } from "../googleEarth/puntos";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { RootState } from "../../redux/store/store";
 import { updateProject } from "../../redux/slices/projectSlice";
 import JSZip from "jszip";
@@ -13,15 +14,25 @@ import {
 } from "../../services/processingRequestService";
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
-const MAX_AREA_M2 = Number(import.meta.env.VITE_MAX_AREA ?? 10000);
+const DEFAULT_MAX_AREA_HECTARES = 100;
+const MAX_AREA_HECTARES = Number(
+  import.meta.env.VITE_MAX_AREA_HECTARES ?? DEFAULT_MAX_AREA_HECTARES
+);
+const MAX_AREA_M2 =
+  (Number.isFinite(MAX_AREA_HECTARES)
+    ? MAX_AREA_HECTARES
+    : DEFAULT_MAX_AREA_HECTARES) * 10000;
 
 interface MapaPoligonoProps {
   setActiveTab: (tab: string) => void;
 }
 
 const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
+  const navigate = useNavigate();
+
   const handleButtonProcesar = () => {
-    setActiveTab("herramienta3"); // Cambia la pestaña activa
+    setActiveTab("herramienta3");
+    navigate("/particles");
   };
 
   // const { updateProject, project } = useProject();
@@ -35,7 +46,9 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   var bounds = null;
   var infoArea = null;
   function Generator() { }
-  const maxArea = Number.isFinite(MAX_AREA_M2) ? MAX_AREA_M2 : 10000; // Área máxima en m2
+  const maxArea = Number.isFinite(MAX_AREA_M2)
+    ? MAX_AREA_M2
+    : DEFAULT_MAX_AREA_HECTARES * 10000;
   const [areaTerrenoM2, setAreaTerrenoM2] = useState(null);
   var isValid = false;
   const centroInicio = { lat: -36.418858, lng: -72.51649 };
@@ -137,7 +150,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
             procesarCoordenadas(Paths[0]);
 
           } else {
-            alert("El polígono debe ser menor o igual a " + m2ToHa(maxArea) + "hectáreas");
+            alert(`El poligono debe ser menor o igual a ${m2ToHa(maxArea)} hectareas`);
           }
         },
         map
