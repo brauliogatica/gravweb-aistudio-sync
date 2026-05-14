@@ -35,8 +35,10 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   const pathsRef = useRef<any[]>([]);
   const isValidRef = useRef(false);
   const selectedPolygonRef = useRef<any>(null);
+  const processingRef = useRef(false);
 
   const handleButtonProcesar = () => {
+    console.info("Gravweb: navegando a /particles");
     setActiveTab("herramienta3");
     navigate("/particles");
   };
@@ -90,6 +92,26 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     });
 
     return coordinates;
+  };
+
+  const processCurrentSelection = () => {
+    const coordinates = syncSelectedPolygon();
+
+    if (isValidRef.current && coordinates?.length >= 3) {
+      console.info("Gravweb: procesando poligono", {
+        points: coordinates.length,
+        areaM2: sessionStorage.getItem("areaSelec"),
+      });
+      procesarCoordenadas(coordinates);
+      return;
+    }
+
+    if (!coordinates?.length) {
+      alert("Selecciona un poligono antes de procesar el terreno");
+      return;
+    }
+
+    alert(`El poligono debe ser menor o igual a ${m2ToHa(maxArea)} hectareas`);
   };
 
   const centroInicio = { lat: -36.418858, lng: -72.51649 };
@@ -205,6 +227,8 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
         "Click para procesar el polígono",
         'Procesar el terreno <i class="bi bi-cloud-upload-fill fa-2x"></i>',
         () => {
+          processCurrentSelection();
+          return;
           const coordinates = syncSelectedPolygon();
 
           if (isValidRef.current && coordinates?.length >= 3) {
@@ -1060,7 +1084,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     dispatch(updateProject({ key: "coordinates", value: coordenadas }));
     dispatch(updateProject({ key: "coordinatesCenter", value: centroide }));
 
-    alert(
+    console.info(
       "Tamaño del área: " +
       m2ToHa(parseFloat(areaDecimales)) +
       " hectáreas\nCoordenadas: " +
@@ -1069,7 +1093,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       sessionStorage.getItem("centroide")
     );
 
-    handleButtonProcesar();
+    setTimeout(handleButtonProcesar, 0);
   };
 
   const AddButton = (controlDiv, title, innerHTML, fn, map) => {
@@ -1200,7 +1224,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     dispatch(updateProject({ key: "coordinates", value: coordenadas }));
     dispatch(updateProject({ key: "coordinatesCenter", value: centroide }));
 
-    alert(
+    console.info(
       "Tamaño del área: " +
       m2ToHa(parseFloat(areaDecimales)) +
       " hectáreas\nCoordenadas: " +
@@ -1211,7 +1235,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
 
     generarMiniatura(coordenadas);
     // exportKmz(coordenadas);
-    handleButtonProcesar();
+    setTimeout(handleButtonProcesar, 0);
   }
 
   if (!MAPS_API_KEY) {
@@ -1267,6 +1291,9 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       </div> */}
       <button className="btn btn-primary" onClick={usarPoligonoPrueba}>
         Usar coordenadas de prueba
+      </button>
+      <button className="btn btn-light ms-2" onClick={processCurrentSelection}>
+        Procesar el terreno <i className="bi bi-cloud-upload-fill"></i>
       </button>
       <input
         id="pac-input"
