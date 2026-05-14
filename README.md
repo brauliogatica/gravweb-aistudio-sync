@@ -56,7 +56,6 @@ Usar solo variables `VITE_*` en archivos locales `.env` no versionados:
 ```bash
 VITE_GOOGLE_MAPS_API_KEY=
 VITE_RHINO_COMPUTE_URL=
-VITE_LOCAL_PROCESSOR_URL=
 VITE_MAX_AREA_HECTARES=100
 ```
 
