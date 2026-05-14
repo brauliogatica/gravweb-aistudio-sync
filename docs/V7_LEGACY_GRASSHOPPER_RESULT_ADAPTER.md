@@ -44,9 +44,9 @@ La definicion existente declara estas entradas:
 
 En `/particles`:
 
-1. `Probar ida-vuelta Rhino` valida conectividad.
-2. `Procesar con Grasshopper` llama `/io`, toma `CacheKey`, llama `/grasshopper` con el poligono guardado y aplica las salidas legacy.
-3. `Cargar terreno demo` sigue disponible como baseline manual.
+1. Si existe una solicitud guardada desde `/analisis`, la vista llama `/io`, toma `CacheKey`, llama `/grasshopper` con el poligono guardado y aplica las salidas legacy automaticamente.
+2. El enlace `Terreno Demo` navega a `/particles?demo=1` y carga el demo comprimido desde `public/demo`.
+3. El visor es el mismo para ambos usos: terreno procesado por Grasshopper o terreno demo.
 
 ## Ajustes de compatibilidad
 
@@ -58,3 +58,19 @@ En `/particles`:
 ## Nota sobre peso
 
 La respuesta de `/grasshopper` puede ser pesada. El adaptador no la sube a GitHub ni la guarda en archivos; solo la aplica en memoria de Redux durante la sesion.
+
+## Archivo Grasshopper
+
+El payload activo que se envia a `/io` vive en:
+
+- `src/components/rhinoCompute/io_req.json`
+
+Ese JSON declara internamente `filename: "beta3.gh"` y contiene la definicion Grasshopper serializada en `algo`.
+
+En el frontend original se encontraron archivos `.gh` editables en:
+
+- `C:\Gravitacional\Aplicación\Frontend-Gravitacional\src\assets\beta23.gh`
+- `C:\Gravitacional\Aplicación\Frontend-Gravitacional\src\assets\2222terreno.gh`
+- `C:\Gravitacional\Aplicación\Frontend-Gravitacional\src\assets\definition.gh`
+
+El binario embebido como `beta3.gh` no coincide por hash con esos candidatos, asi que para modificar exactamente la definicion activa hay que abrir/exportar el `beta3.gh` original o regenerar `io_req.json` desde Rhino/Hops despues de editar la definicion correcta.

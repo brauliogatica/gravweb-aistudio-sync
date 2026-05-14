@@ -1,556 +1,352 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import WaterParticle from "../components/waterParticles/WaterParticle";
-import { RootState } from "../redux/store/store";
 import { updateProject } from "../redux/slices/projectSlice";
+import type { RootState } from "../redux/store/store";
 import { loadDemoProjectData } from "../services/demoProjectLoader";
 import { loadProcessingRequest } from "../services/processingRequestService";
 import {
-  checkRhinoComputeHealth,
   getRhinoComputeUrl,
-  probeRhinoComputeRoundTrip,
   solveTerrainWithGrasshopper,
 } from "../services/rhinoComputeService";
-import type {
-  GrasshopperTerrainResult,
-  LocalProcessorHealth,
-  ProcessingRequest,
-  RhinoRoundTripProbeResult,
-} from "../types/types";
+import type { GrasshopperTerrainResult, ProcessingRequest } from "../types/types";
 
-const hasData = (value: unknown) => {
+type ViewState = "idle" | "loading-demo" | "processing" | "ready" | "error";
+
+const hasTerrainData = (value: unknown) => {
   if (!value) return false;
-  if (typeof value === "string") return value.trim().length > 2;
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === "object") return Object.keys(value).length > 0;
   return true;
 };
 
-type ProbeState =
-  | { status: "idle"; result?: undefined; error?: undefined }
-  | { status: "running"; result?: undefined; error?: undefined }
-  | { status: "success"; result: RhinoRoundTripProbeResult; error?: undefined }
-  | { status: "error"; result?: RhinoRoundTripProbeResult; error: string };
-
-type GrasshopperState =
-  | { status: "idle"; result?: undefined; error?: undefined }
-  | { status: "running"; result?: undefined; error?: undefined }
-  | { status: "success"; result: GrasshopperTerrainResult; error?: undefined }
-  | { status: "error"; result?: undefined; error: string };
+const formatHectares = (areaM2?: number) => {
+  if (!Number.isFinite(areaM2)) return "sin area";
+  return `${((areaM2 ?? 0) / 10000).toFixed(2)} ha`;
+};
 
 function TerrenoDemoPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const project = useSelector((state: RootState) => state.project);
+  const demoMode = useMemo(
+    () => new URLSearchParams(location.search).get("demo") === "1",
+    [location.search]
+  );
+
   const [processingRequest, setProcessingRequest] =
     useState<ProcessingRequest | null>(null);
-  const [rhinoHealth, setRhinoHealth] = useState<LocalProcessorHealth>({
-    available: false,
-    status: getRhinoComputeUrl() ? "checking" : "not-configured",
-  });
-  const [ready, setReady] = useState(
-    hasData(project.genJson) && hasData(project.lineasJson)
-  );
-  const [loadingDemo, setLoadingDemo] = useState(false);
-  const [demoError, setDemoError] = useState<string | null>(null);
-  const [probeState, setProbeState] = useState<ProbeState>({ status: "idle" });
-  const [grasshopperState, setGrasshopperState] = useState<GrasshopperState>({
-    status: "idle",
-  });
+  const [viewState, setViewState] = useState<ViewState>("idle");
+  const [message, setMessage] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [result, setResult] = useState<GrasshopperTerrainResult | null>(null);
+  const [lastProcessedRequestId, setLastProcessedRequestId] =
+    useState<string | null>(null);
+
+  const terrainReady =
+    hasTerrainData(project.genJson) && hasTerrainData(project.lineasJson);
 
   useEffect(() => {
     setProcessingRequest(loadProcessingRequest());
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (viewState === "idle" && terrainReady && !processingRequest && !demoMode) {
+      setViewState("ready");
+    }
+  }, [demoMode, processingRequest, terrainReady, viewState]);
+
+  useEffect(() => {
+    if (!demoMode) return;
 
     let cancelled = false;
-    checkRhinoComputeHealth().then((health) => {
-      if (!cancelled) {
-        console.info("Estado de Rhino Compute:", health);
-        setRhinoHealth(health);
-      }
-    });
+    setViewState("loading-demo");
+    setMessage("Cargando terreno demo...");
+    setError("");
+    setResult(null);
+
+    loadDemoProjectData(dispatch)
+      .then(() => {
+        if (cancelled) return;
+        setMessage("");
+        setViewState("ready");
+      })
+      .catch((loadError) => {
+        if (cancelled) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "No se pudo cargar el terreno demo."
+        );
+        setMessage("");
+        setViewState("error");
+      });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [demoMode, dispatch]);
 
   useEffect(() => {
-    if (hasData(project.genJson) && hasData(project.lineasJson)) {
-      setReady(true);
-    }
-  }, [project.genJson, project.lineasJson]);
+    if (demoMode || !processingRequest) return;
+    if (lastProcessedRequestId === processingRequest.id) return;
 
-  const handleLoadDemo = async () => {
-    setDemoError(null);
-    setLoadingDemo(true);
+    let cancelled = false;
+    setLastProcessedRequestId(processingRequest.id);
+    setViewState("processing");
+    setMessage("Procesando terreno con Grasshopper...");
+    setError("");
+    setResult(null);
 
-    try {
-      await loadDemoProjectData(dispatch);
-      setReady(true);
-    } catch (loadError) {
-      console.error(loadError);
-      setDemoError("No se pudo cargar el terreno demo.");
-    } finally {
-      setLoadingDemo(false);
-    }
-  };
-
-  const handleProbeRhino = async () => {
-    console.info("Gravweb: probando ida-vuelta Rhino", processingRequest);
-    setProbeState({ status: "running" });
-
-    const result = await probeRhinoComputeRoundTrip(processingRequest);
-    console.info("Gravweb: resultado ida-vuelta Rhino", result);
-
-    if (result.ok) {
-      setProbeState({ status: "success", result });
+    if (!getRhinoComputeUrl()) {
+      setMessage("");
+      setError("VITE_RHINO_COMPUTE_URL no esta configurado.");
+      setViewState("error");
       return;
     }
 
-    setProbeState({
-      status: "error",
-      result,
-      error: result.message,
-    });
-  };
+    solveTerrainWithGrasshopper(processingRequest, project)
+      .then(({ result: grasshopperResult, updates }) => {
+        if (cancelled) return;
 
-  const handleProcessGrasshopper = async () => {
-    if (!processingRequest) {
-      setGrasshopperState({
-        status: "error",
-        error: "No hay solicitud de terreno para procesar.",
+        Object.entries(updates).forEach(([key, value]) => {
+          dispatch(updateProject({ key, value }));
+        });
+
+        dispatch(
+          updateProject({ key: "coordinates", value: processingRequest.polygon })
+        );
+
+        if (processingRequest.centroid) {
+          dispatch(
+            updateProject({
+              key: "coordinatesCenter",
+              value: processingRequest.centroid,
+            })
+          );
+        }
+
+        if (Number.isFinite(processingRequest.areaM2)) {
+          dispatch(
+            updateProject({
+              key: "areaTerrenoM2",
+              value: processingRequest.areaM2,
+            })
+          );
+        }
+
+        setResult(grasshopperResult);
+        setMessage("");
+        setViewState("ready");
+      })
+      .catch((solveError) => {
+        if (cancelled) return;
+        setError(
+          solveError instanceof Error
+            ? solveError.message
+            : "No se pudo procesar el terreno con Grasshopper."
+        );
+        setMessage("");
+        setViewState("error");
       });
-      return;
-    }
 
-    console.info("Gravweb: procesando terreno con Grasshopper", processingRequest);
-    setGrasshopperState({ status: "running" });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    demoMode,
+    dispatch,
+    lastProcessedRequestId,
+    processingRequest,
+    project,
+  ]);
 
-    try {
-      const { result, updates } = await solveTerrainWithGrasshopper(
-        processingRequest,
-        project
-      );
-
-      for (const [key, value] of Object.entries(updates)) {
-        dispatch(updateProject({ key, value }));
-      }
-
-      dispatch(updateProject({ key: "coordinates", value: processingRequest.polygon }));
-      if (processingRequest.centroid) {
-        dispatch(
-          updateProject({
-            key: "coordinatesCenter",
-            value: processingRequest.centroid,
-          })
-        );
-      }
-      if (typeof processingRequest.areaM2 === "number") {
-        dispatch(
-          updateProject({
-            key: "areaTerrenoM2",
-            value: processingRequest.areaM2,
-          })
-        );
-      }
-
-      setGrasshopperState({ status: "success", result });
-      setReady(true);
-      console.info("Gravweb: terreno Rhino aplicado a Redux", result);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "No se pudo procesar el terreno con Grasshopper.";
-      console.error(error);
-      setGrasshopperState({ status: "error", error: message });
-    }
+  const openDemo = () => {
+    navigate("/particles?demo=1");
   };
 
-  return (
-    <>
-      <ProcessingRequestHud
-        request={processingRequest}
-        rhinoHealth={rhinoHealth}
-        demoLoaded={ready}
-        loadingDemo={loadingDemo}
-        demoError={demoError}
-        probeState={probeState}
-        grasshopperState={grasshopperState}
-        onLoadDemo={handleLoadDemo}
-        onProbeRhino={handleProbeRhino}
-        onProcessGrasshopper={handleProcessGrasshopper}
-        onBackToAnalysis={() => navigate("/analisis")}
-      />
-      {ready ? (
+  const retryProcessing = () => {
+    setLastProcessedRequestId(null);
+    setError("");
+    setMessage("");
+    setViewState("idle");
+  };
+
+  if (viewState === "ready" || (viewState === "idle" && terrainReady)) {
+    return (
+      <>
         <WaterParticle />
-      ) : (
-        <NoTerrainLoaded
-          request={processingRequest}
-          loadingDemo={loadingDemo}
-          demoError={demoError}
-          probeState={probeState}
-          grasshopperState={grasshopperState}
-          onLoadDemo={handleLoadDemo}
-          onProbeRhino={handleProbeRhino}
-          onProcessGrasshopper={handleProcessGrasshopper}
-          onBackToAnalysis={() => navigate("/analisis")}
-        />
-      )}
-    </>
+        {result && (
+          <CompactStatus>
+            <strong>Terreno procesado por Grasshopper</strong>
+            <span>
+              HTTP {result.status} - {result.durationMs} ms -{" "}
+              {result.updatedKeys.length} campos aplicados
+            </span>
+          </CompactStatus>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <StatusScreen
+      title={
+        viewState === "processing"
+          ? "Procesando terreno"
+          : viewState === "loading-demo"
+            ? "Cargando terreno demo"
+            : "Visualizador de terreno"
+      }
+      message={
+        message ||
+        error ||
+        "Selecciona un terreno en Analisis o abre el terreno demo."
+      }
+      error={viewState === "error" ? error : ""}
+      processingRequest={processingRequest}
+      onOpenDemo={openDemo}
+      onRetry={processingRequest ? retryProcessing : undefined}
+      onBack={() => navigate("/analisis")}
+    />
   );
 }
 
-const sourceLabels: Record<ProcessingRequest["source"], string> = {
-  "manual-polygon": "Poligono manual",
-  "demo-polygon": "Poligono demo",
-  "imported-file": "Archivo importado",
-};
-
-function ProcessingRequestHud({
-  request,
-  rhinoHealth,
-  demoLoaded,
-  loadingDemo,
-  demoError,
-  probeState,
-  grasshopperState,
-  onLoadDemo,
-  onProbeRhino,
-  onProcessGrasshopper,
-  onBackToAnalysis,
+function StatusScreen({
+  title,
+  message,
+  error,
+  processingRequest,
+  onOpenDemo,
+  onRetry,
+  onBack,
 }: {
-  request: ProcessingRequest | null;
-  rhinoHealth: LocalProcessorHealth;
-  demoLoaded: boolean;
-  loadingDemo: boolean;
-  demoError: string | null;
-  probeState: ProbeState;
-  grasshopperState: GrasshopperState;
-  onLoadDemo: () => void;
-  onProbeRhino: () => void;
-  onProcessGrasshopper: () => void;
-  onBackToAnalysis: () => void;
+  title: string;
+  message: string;
+  error: string;
+  processingRequest: ProcessingRequest | null;
+  onOpenDemo: () => void;
+  onRetry?: () => void;
+  onBack: () => void;
 }) {
-  const rhinoConfigured = Boolean(getRhinoComputeUrl());
-  const processorLabel = !rhinoConfigured
-    ? "No configurado"
-    : rhinoHealth.available
-      ? "Disponible"
-      : rhinoHealth.status === "checking"
-        ? "Verificando"
-        : "No disponible";
-
   return (
-    <aside
-      style={{
-        position: "fixed",
-        top: 86,
-        left: 222,
-        zIndex: 20,
-        maxWidth: 430,
-        border: "1px solid rgba(125, 211, 252, 0.28)",
-        borderRadius: 8,
-        background: "rgba(6, 11, 25, 0.86)",
-        color: "#f8fafc",
-        padding: "12px 14px",
-        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.25)",
-        fontSize: 13,
-        lineHeight: 1.45,
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      <strong style={{ display: "block", marginBottom: 6 }}>
-        Solicitud de procesamiento
-      </strong>
-      {request ? (
-        <>
-          <div>ID: {request.id}</div>
-          <div>Origen: {sourceLabels[request.source]}</div>
-          <div>Estado: {request.status}</div>
-          <div>Puntos: {request.polygon.length}</div>
-          {typeof request.areaM2 === "number" && (
-            <div>Area: {(request.areaM2 / 10000).toFixed(2)} ha</div>
-          )}
-        </>
-      ) : (
-        <div>Sin solicitud activa.</div>
-      )}
-      <div>Rhino Compute: {processorLabel}</div>
-      <div>Terreno demo: {demoLoaded ? "Cargado" : "Disponible con boton"}</div>
-      {!demoLoaded && request && (
-        <div style={{ marginTop: 8, color: "#fde68a" }}>
-          Hay solicitud en memoria, pero aun no hay malla procesada. Puedes
-          probar el ida-vuelta a Rhino o cargar el demo.
-        </div>
-      )}
-      <ProbeStatus probeState={probeState} compact />
-      <GrasshopperStatus grasshopperState={grasshopperState} compact />
-      {demoError && <div style={{ color: "#fecaca" }}>{demoError}</div>}
-      <ActionButtons
-        rhinoConfigured={rhinoConfigured}
-        hasRequest={Boolean(request)}
-        loadingDemo={loadingDemo}
-        demoLoaded={demoLoaded}
-        probeState={probeState}
-        grasshopperState={grasshopperState}
-        onLoadDemo={onLoadDemo}
-        onProbeRhino={onProbeRhino}
-        onProcessGrasshopper={onProcessGrasshopper}
-        onBackToAnalysis={onBackToAnalysis}
-      />
-    </aside>
-  );
-}
+    <div style={styles.screen}>
+      <div style={styles.panel}>
+        <h1 style={styles.title}>{title}</h1>
+        <p style={error ? styles.errorText : styles.message}>{message}</p>
 
-function NoTerrainLoaded({
-  request,
-  loadingDemo,
-  demoError,
-  probeState,
-  grasshopperState,
-  onLoadDemo,
-  onProbeRhino,
-  onProcessGrasshopper,
-  onBackToAnalysis,
-}: {
-  request: ProcessingRequest | null;
-  loadingDemo: boolean;
-  demoError: string | null;
-  probeState: ProbeState;
-  grasshopperState: GrasshopperState;
-  onLoadDemo: () => void;
-  onProbeRhino: () => void;
-  onProcessGrasshopper: () => void;
-  onBackToAnalysis: () => void;
-}) {
-  const rhinoConfigured = Boolean(getRhinoComputeUrl());
-
-  return (
-    <main
-      style={{
-        minHeight: "calc(100vh - 70px)",
-        display: "grid",
-        placeItems: "center",
-        background: "#0f172a",
-        color: "#f8fafc",
-        padding: "120px 24px 48px",
-      }}
-    >
-      <section
-        style={{
-          width: "min(760px, 100%)",
-          border: "1px solid rgba(125, 211, 252, 0.24)",
-          borderRadius: 8,
-          background: "rgba(15, 23, 42, 0.88)",
-          padding: 24,
-          boxShadow: "0 22px 60px rgba(0, 0, 0, 0.28)",
-        }}
-      >
-        <h2 style={{ marginTop: 0, marginBottom: 10 }}>
-          Terreno demo listo para pruebas
-        </h2>
-        <p style={{ marginTop: 0, color: "#cbd5e1" }}>
-          La pantalla mantiene el demo disponible, pero no lo carga
-          automaticamente cuando vienes desde un poligono. Asi podemos probar
-          primero si AI Studio envia al PC por Cloudflare y si Rhino responde.
-        </p>
-        {request ? (
-          <div style={{ marginBottom: 14 }}>
-            <strong>Solicitud activa:</strong> {sourceLabels[request.source]} -{" "}
-            {request.polygon.length} puntos
-            {typeof request.areaM2 === "number" &&
-              ` - ${(request.areaM2 / 10000).toFixed(2)} ha`}
+        {processingRequest && (
+          <div style={styles.meta}>
+            <span>Solicitud: {processingRequest.id}</span>
+            <span>Puntos: {processingRequest.polygon.length}</span>
+            <span>Area: {formatHectares(processingRequest.areaM2)}</span>
           </div>
-        ) : (
-          <div style={{ marginBottom: 14 }}>No hay solicitud activa.</div>
         )}
-        <ProbeStatus probeState={probeState} />
-        <GrasshopperStatus grasshopperState={grasshopperState} />
-        {demoError && (
-          <div style={{ color: "#fecaca", marginBottom: 12 }}>{demoError}</div>
-        )}
-        <ActionButtons
-          rhinoConfigured={rhinoConfigured}
-          hasRequest={Boolean(request)}
-          loadingDemo={loadingDemo}
-          demoLoaded={false}
-          probeState={probeState}
-          grasshopperState={grasshopperState}
-          onLoadDemo={onLoadDemo}
-          onProbeRhino={onProbeRhino}
-          onProcessGrasshopper={onProcessGrasshopper}
-          onBackToAnalysis={onBackToAnalysis}
-        />
-      </section>
-    </main>
-  );
-}
 
-function ActionButtons({
-  rhinoConfigured,
-  hasRequest,
-  loadingDemo,
-  demoLoaded,
-  probeState,
-  grasshopperState,
-  onLoadDemo,
-  onProbeRhino,
-  onProcessGrasshopper,
-  onBackToAnalysis,
-}: {
-  rhinoConfigured: boolean;
-  hasRequest: boolean;
-  loadingDemo: boolean;
-  demoLoaded: boolean;
-  probeState: ProbeState;
-  grasshopperState: GrasshopperState;
-  onLoadDemo: () => void;
-  onProbeRhino: () => void;
-  onProcessGrasshopper: () => void;
-  onBackToAnalysis: () => void;
-}) {
-  const isProbing = probeState.status === "running";
-  const isProcessing = grasshopperState.status === "running";
-
-  return (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-      <button
-        type="button"
-        onClick={onProcessGrasshopper}
-        disabled={!rhinoConfigured || !hasRequest || isProcessing}
-        style={buttonStyle(!rhinoConfigured || !hasRequest || isProcessing)}
-      >
-        {isProcessing ? "Procesando..." : "Procesar con Grasshopper"}
-      </button>
-      <button
-        type="button"
-        onClick={onProbeRhino}
-        disabled={!rhinoConfigured || isProbing}
-        style={buttonStyle(!rhinoConfigured || isProbing)}
-      >
-        {isProbing ? "Probando Rhino..." : "Probar ida-vuelta Rhino"}
-      </button>
-      <button
-        type="button"
-        onClick={onLoadDemo}
-        disabled={loadingDemo}
-        style={buttonStyle(loadingDemo)}
-      >
-        {loadingDemo
-          ? "Cargando demo..."
-          : demoLoaded
-            ? "Recargar terreno demo"
-            : "Cargar terreno demo"}
-      </button>
-      <button type="button" onClick={onBackToAnalysis} style={secondaryButton}>
-        Volver a analisis
-      </button>
-    </div>
-  );
-}
-
-function ProbeStatus({
-  probeState,
-  compact = false,
-}: {
-  probeState: ProbeState;
-  compact?: boolean;
-}) {
-  if (probeState.status === "idle") return null;
-
-  if (probeState.status === "running") {
-    return (
-      <div style={{ marginTop: compact ? 8 : 0, color: "#bfdbfe" }}>
-        Enviando prueba a Rhino Compute...
-      </div>
-    );
-  }
-
-  const result = probeState.result;
-  const color = probeState.status === "success" ? "#bbf7d0" : "#fecaca";
-
-  return (
-    <div style={{ marginTop: compact ? 8 : 0, marginBottom: compact ? 0 : 12 }}>
-      <div style={{ color }}>
-        {probeState.status === "success" ? "OK" : "Error"}:{" "}
-        {result?.message ?? probeState.error}
-      </div>
-      {result && (
-        <div style={{ color: "#cbd5e1" }}>
-          {result.endpoint} - HTTP {result.status} - {result.durationMs} ms
-          {typeof result.responseBytes === "number" &&
-            ` - ${result.responseBytes} bytes`}
+        <div style={styles.actions}>
+          {onRetry && (
+            <button style={styles.primaryButton} onClick={onRetry}>
+              Reintentar procesamiento
+            </button>
+          )}
+          <button style={styles.primaryButton} onClick={onOpenDemo}>
+            Terreno Demo
+          </button>
+          <button style={styles.secondaryButton} onClick={onBack}>
+            Volver a Analisis
+          </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-function GrasshopperStatus({
-  grasshopperState,
-  compact = false,
-}: {
-  grasshopperState: GrasshopperState;
-  compact?: boolean;
-}) {
-  if (grasshopperState.status === "idle") return null;
-
-  if (grasshopperState.status === "running") {
-    return (
-      <div style={{ marginTop: compact ? 8 : 0, color: "#bfdbfe" }}>
-        Procesando terreno con Grasshopper...
-      </div>
-    );
-  }
-
-  if (grasshopperState.status === "error") {
-    return (
-      <div
-        style={{
-          marginTop: compact ? 8 : 0,
-          marginBottom: compact ? 0 : 12,
-          color: "#fecaca",
-        }}
-      >
-        Error: {grasshopperState.error}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ marginTop: compact ? 8 : 0, marginBottom: compact ? 0 : 12 }}>
-      <div style={{ color: "#bbf7d0" }}>{grasshopperState.result.message}</div>
-      <div style={{ color: "#cbd5e1" }}>
-        HTTP {grasshopperState.result.status} -{" "}
-        {grasshopperState.result.durationMs} ms -{" "}
-        {grasshopperState.result.updatedKeys.length} campos aplicados
       </div>
     </div>
   );
 }
 
-function buttonStyle(disabled: boolean): React.CSSProperties {
-  return {
-    border: "1px solid rgba(125, 211, 252, 0.28)",
-    borderRadius: 6,
-    background: disabled ? "rgba(71, 85, 105, 0.65)" : "#0ea5e9",
-    color: "#ffffff",
-    cursor: disabled ? "not-allowed" : "pointer",
+function CompactStatus({ children }: { children: React.ReactNode }) {
+  return <div style={styles.compactStatus}>{children}</div>;
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  screen: {
+    minHeight: "calc(100vh - 74px)",
+    background: "#0b1628",
+    color: "#f8fbff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "96px 24px 32px",
+  },
+  panel: {
+    width: "min(720px, 100%)",
+    border: "1px solid rgba(119, 184, 255, 0.35)",
+    borderRadius: 8,
+    background: "#091222",
+    padding: 24,
+    boxShadow: "0 18px 50px rgba(0, 0, 0, 0.28)",
+  },
+  title: {
+    margin: "0 0 12px",
+    fontSize: 28,
     fontWeight: 700,
-    padding: "8px 10px",
-  };
-}
-
-const secondaryButton: React.CSSProperties = {
-  border: "1px solid rgba(148, 163, 184, 0.35)",
-  borderRadius: 6,
-  background: "rgba(15, 23, 42, 0.8)",
-  color: "#ffffff",
-  cursor: "pointer",
-  fontWeight: 700,
-  padding: "8px 10px",
+  },
+  message: {
+    margin: 0,
+    fontSize: 16,
+    lineHeight: 1.5,
+  },
+  errorText: {
+    margin: 0,
+    fontSize: 16,
+    lineHeight: 1.5,
+    color: "#ffb8b8",
+  },
+  meta: {
+    display: "grid",
+    gap: 6,
+    marginTop: 18,
+    color: "#cfe7ff",
+    fontSize: 14,
+  },
+  actions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 22,
+  },
+  primaryButton: {
+    border: "1px solid #25a9e9",
+    borderRadius: 6,
+    background: "#0ea5e9",
+    color: "white",
+    fontWeight: 700,
+    padding: "10px 14px",
+    cursor: "pointer",
+  },
+  secondaryButton: {
+    border: "1px solid rgba(255, 255, 255, 0.25)",
+    borderRadius: 6,
+    background: "transparent",
+    color: "white",
+    fontWeight: 700,
+    padding: "10px 14px",
+    cursor: "pointer",
+  },
+  compactStatus: {
+    position: "fixed",
+    left: 224,
+    top: 92,
+    zIndex: 10,
+    display: "grid",
+    gap: 4,
+    maxWidth: 430,
+    border: "1px solid rgba(119, 184, 255, 0.35)",
+    borderRadius: 8,
+    background: "rgba(5, 12, 25, 0.88)",
+    color: "white",
+    padding: "12px 14px",
+    fontSize: 13,
+  },
 };
 
 export default TerrenoDemoPage;

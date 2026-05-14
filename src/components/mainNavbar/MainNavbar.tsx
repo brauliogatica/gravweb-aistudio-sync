@@ -46,14 +46,17 @@ function MainNavbar() {
                   className={`nav-link ${location.pathname === "/analisis" ? "active" : ""}`}
                   href="/analisis"
                 >
-                  Análisis
+                  Analisis
                 </a>
               </li>
               <li className="nav-item">
                 <a
                   className={`nav-link ${location.pathname === "/particles" ? "active" : ""}`}
-                  type="button"
-                  onClick={loadDemoProject}
+                  href="/particles?demo=1"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    loadDemoProject();
+                  }}
                 >
                   Terreno Demo
                 </a>

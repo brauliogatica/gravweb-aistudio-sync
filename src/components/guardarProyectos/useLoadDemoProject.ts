@@ -5,6 +5,6 @@ export function useLoadDemoProject() {
   const navigate = useNavigate();
 
   return () => {
-    navigate("/particles");
+    navigate("/particles?demo=1");
   };
 }
