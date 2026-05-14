@@ -1,7 +1,10 @@
 import type {
+  GrasshopperTerrainResult,
   ProcessingRequest,
+  Project,
   RhinoRoundTripProbeResult,
 } from "../types/types";
+import { extractProjectUpdatesFromGrasshopper } from "./grasshopperProjectAdapter";
 
 const RHINO_COMPUTE_URL =
   import.meta.env.VITE_RHINO_COMPUTE_URL?.trim().replace(/\/+$/, "") ?? "";
@@ -138,6 +141,74 @@ export async function probeRhinoComputeRoundTrip(
   }
 }
 
+export async function solveTerrainWithGrasshopper(
+  request: ProcessingRequest,
+  project: Project
+): Promise<{
+  result: GrasshopperTerrainResult;
+  updates: Record<string, unknown>;
+}> {
+  if (!RHINO_COMPUTE_URL) {
+    throw new Error("VITE_RHINO_COMPUTE_URL no esta configurado.");
+  }
+
+  const startedAt = performance.now();
+  const ioModule = await import("../components/rhinoCompute/io_req.json");
+  const ioRequest = (ioModule as any).default ?? ioModule;
+  const ioContent = ioRequest.Content ?? ioRequest;
+
+  const definitionInfo = await fetch(`${RHINO_COMPUTE_URL}/io`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(ioContent),
+    redirect: "follow",
+  });
+
+  if (!definitionInfo.ok) {
+    throw new Error(`Rhino /io respondio con ${definitionInfo.status}.`);
+  }
+
+  const definition = await definitionInfo.json();
+  const solveBody = buildLegacySolveBody(
+    ioContent,
+    definition.CacheKey ?? ioContent.pointer,
+    request,
+    project
+  );
+
+  const response = await fetch(`${RHINO_COMPUTE_URL}/grasshopper`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(solveBody),
+    redirect: "follow",
+  });
+
+  const responseText = await response.text();
+  const durationMs = Math.round(performance.now() - startedAt);
+
+  if (!response.ok) {
+    throw new Error(`Rhino /grasshopper respondio con ${response.status}.`);
+  }
+
+  const grasshopperResponse = JSON.parse(responseText);
+  const updates = extractProjectUpdatesFromGrasshopper(grasshopperResponse);
+  const updatedKeys = Object.keys(updates);
+
+  return {
+    result: {
+      ok: true,
+      status: String(response.status),
+      durationMs,
+      message: "Terreno procesado por Grasshopper.",
+      updatedKeys,
+      responseBytes: responseText.length,
+      warnings: grasshopperResponse.warnings,
+      errors: grasshopperResponse.errors,
+    },
+    updates,
+  };
+}
+
 function summarizeProcessingRequest(request?: ProcessingRequest | null) {
   if (!request) return undefined;
 
@@ -146,6 +217,78 @@ function summarizeProcessingRequest(request?: ProcessingRequest | null) {
     source: request.source,
     pointCount: request.polygon.length,
     areaM2: request.areaM2,
+  };
+}
+
+function buildLegacySolveBody(
+  ioContent: any,
+  pointer: string,
+  request: ProcessingRequest,
+  project: Project
+) {
+  const coordinates = request.polygon;
+  const coordinatesCenter =
+    request.centroid ?? project.coordinatesCenter ?? coordinates[0];
+
+  return {
+    absolutetolerance: ioContent.absolutetolerance ?? 0.01,
+    angletolerance: ioContent.angletolerance ?? 1.0,
+    modelunits: ioContent.modelunits ?? "Meters",
+    dataversion: ioContent.dataversion ?? 8,
+    algo: null,
+    filename: ioContent.filename,
+    pointer,
+    cachesolve: true,
+    values: [
+      ghString("projectId", project._id ?? request.id),
+      ghString("projectName", project.name || request.id),
+      ghString("projectDescription", project.description || "Gravweb AI Studio"),
+      ghString("userId", project.userId || "aistudio"),
+      ghJsonString("coordinatesCenter", coordinatesCenter),
+      ghJsonString("coordinates", coordinates),
+      ghString("uso", "Bosque"),
+      ghString("tipo", "Suelo arcilloso"),
+      ghString("humedad", "Moderado"),
+      ghString("infiltracion", "arcilla arenosa"),
+      ghString("almacenamiento", "limo"),
+      ghBoolean("Segmentacion", true),
+      ghBoolean("Dise\u00f1o", true),
+      ghBoolean("DatosXR", true),
+    ],
+    warnings: [],
+    errors: [],
+  };
+}
+
+function ghString(paramName: string, value: string) {
+  return {
+    ParamName: paramName,
+    InnerTree: {
+      "{0}": [
+        {
+          type: "System.String",
+          data: JSON.stringify(value),
+        },
+      ],
+    },
+  };
+}
+
+function ghJsonString(paramName: string, value: unknown) {
+  return ghString(paramName, JSON.stringify(value, null, 2));
+}
+
+function ghBoolean(paramName: string, value: boolean) {
+  return {
+    ParamName: paramName,
+    InnerTree: {
+      "{0}": [
+        {
+          type: "System.Boolean",
+          data: value ? "true" : "false",
+        },
+      ],
+    },
   };
 }
 

@@ -86,6 +86,17 @@ export interface RhinoRoundTripProbeResult {
   };
 }
 
+export interface GrasshopperTerrainResult {
+  ok: boolean;
+  status: string;
+  durationMs: number;
+  message: string;
+  updatedKeys: string[];
+  responseBytes?: number;
+  warnings?: unknown[];
+  errors?: unknown[];
+}
+
 export interface Project {
   _id?: string;
   name: string;
