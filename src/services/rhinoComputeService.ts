@@ -1,3 +1,8 @@
+import type {
+  ProcessingRequest,
+  RhinoRoundTripProbeResult,
+} from "../types/types";
+
 const RHINO_COMPUTE_URL =
   import.meta.env.VITE_RHINO_COMPUTE_URL?.trim().replace(/\/+$/, "") ?? "";
 
@@ -8,6 +13,7 @@ export interface GrasshopperRequest {
 
 const baseHeaders: Record<string, string> = {
   "Content-Type": "application/json",
+  Accept: "application/json, text/plain, */*",
   "ngrok-skip-browser-warning": "ngrok-skip",
 };
 
@@ -72,6 +78,75 @@ export async function getRhinoIo(
   }
 
   return response.json();
+}
+
+export async function probeRhinoComputeRoundTrip(
+  request?: ProcessingRequest | null
+): Promise<RhinoRoundTripProbeResult> {
+  if (!RHINO_COMPUTE_URL) {
+    return {
+      ok: false,
+      endpoint: "/io",
+      status: "not-configured",
+      durationMs: 0,
+      message: "VITE_RHINO_COMPUTE_URL no esta configurado.",
+      requestSummary: summarizeProcessingRequest(request),
+    };
+  }
+
+  const startedAt = performance.now();
+
+  try {
+    const ioModule = await import("../components/rhinoCompute/io_req.json");
+    const ioRequest = (ioModule as any).default ?? ioModule;
+    const ioContent = ioRequest.Content ?? ioRequest;
+
+    const response = await fetch(`${RHINO_COMPUTE_URL}/io`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(ioContent),
+      redirect: "follow",
+    });
+
+    const text = await response.text();
+    const durationMs = Math.round(performance.now() - startedAt);
+
+    return {
+      ok: response.ok,
+      endpoint: "/io",
+      status: String(response.status),
+      durationMs,
+      message: response.ok
+        ? "Ida-vuelta con Rhino Compute confirmada."
+        : `Rhino Compute respondio con ${response.status}.`,
+      responseBytes: text.length,
+      responsePreview: text.slice(0, 500),
+      requestSummary: summarizeProcessingRequest(request),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      endpoint: "/io",
+      status: "unreachable",
+      durationMs: Math.round(performance.now() - startedAt),
+      message:
+        error instanceof Error
+          ? error.message
+          : "No se pudo completar la ida-vuelta con Rhino Compute.",
+      requestSummary: summarizeProcessingRequest(request),
+    };
+  }
+}
+
+function summarizeProcessingRequest(request?: ProcessingRequest | null) {
+  if (!request) return undefined;
+
+  return {
+    id: request.id,
+    source: request.source,
+    pointCount: request.polygon.length,
+    areaM2: request.areaM2,
+  };
 }
 
 export async function solveGrasshopper(

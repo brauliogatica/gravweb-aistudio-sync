@@ -70,6 +70,22 @@ export interface LocalProcessorResponse {
   message?: string;
 }
 
+export interface RhinoRoundTripProbeResult {
+  ok: boolean;
+  endpoint: string;
+  status: string;
+  durationMs: number;
+  message: string;
+  responseBytes?: number;
+  responsePreview?: string;
+  requestSummary?: {
+    id?: string;
+    source?: ProcessingRequestSource;
+    pointCount?: number;
+    areaM2?: number;
+  };
+}
+
 export interface Project {
   _id?: string;
   name: string;
