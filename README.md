@@ -34,6 +34,10 @@ Si AI Studio necesita abrir la app sin claves, la pantalla de analisis usa un mo
 VITE_GOOGLE_MAPS_API_KEY=
 ```
 
+En AI Studio, agregar la misma variable en `Settings -> Secrets` con el nombre
+exacto `VITE_GOOGLE_MAPS_API_KEY`. La app lee esa configuracion desde
+`import.meta.env.VITE_GOOGLE_MAPS_API_KEY`.
+
 ## Uso Local
 
 ```bash
@@ -71,6 +75,12 @@ npm run processor:dev
 ```
 
 Luego usar en `.env` local:
+
+```bash
+VITE_LOCAL_PROCESSOR_URL=http://127.0.0.1:8787
+```
+
+Para conectar el procesador local desde AI Studio, agregar tambien:
 
 ```bash
 VITE_LOCAL_PROCESSOR_URL=http://127.0.0.1:8787

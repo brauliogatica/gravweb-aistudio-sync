@@ -5,7 +5,7 @@ import type {
 } from "../types/types";
 
 export const getLocalProcessorUrl = () => {
-  const rawUrl = process.env.REACT_APP_LOCAL_PROCESSOR_URL ?? "";
+  const rawUrl = import.meta.env.VITE_LOCAL_PROCESSOR_URL ?? "";
   return rawUrl.trim().replace(/\/+$/, "");
 };
 

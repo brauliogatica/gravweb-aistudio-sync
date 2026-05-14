@@ -12,7 +12,8 @@ import {
   saveProcessingRequest,
 } from "../../services/processingRequestService";
 
-const MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() ?? "";
+const MAX_AREA_M2 = Number(import.meta.env.VITE_MAX_AREA ?? 10000);
 
 interface MapaPoligonoProps {
   setActiveTab: (tab: string) => void;
@@ -34,7 +35,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   var bounds = null;
   var infoArea = null;
   function Generator() { }
-  const maxArea = process.env.REACT_APP_MAX_AREA ? parseFloat(process.env.REACT_APP_MAX_AREA) : 10000; // Área máxima en m2
+  const maxArea = Number.isFinite(MAX_AREA_M2) ? MAX_AREA_M2 : 10000; // Área máxima en m2
   const [areaTerrenoM2, setAreaTerrenoM2] = useState(null);
   var isValid = false;
   const centroInicio = { lat: -36.418858, lng: -72.51649 };
@@ -66,6 +67,10 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   // document.body.appendChild(script);
 
   useEffect(() => {
+    if (!MAPS_API_KEY) {
+      return;
+    }
+
     // Define initMap en el contexto global
     (window as any).initMap = () => {
       // Inicializa el mapa aquí
@@ -424,6 +429,9 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&callback=initMap&libraries=drawing,places,geometry&v=weekly`;
     script.async = true;
+    script.onerror = () => {
+      console.error("No se pudo cargar Google Maps. Revisa VITE_GOOGLE_MAPS_API_KEY.");
+    };
     document.body.appendChild(script);
 
     // Buscador de lugares
@@ -454,6 +462,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     return () => {
       // Limpia la función global al desmontar el componente
       delete (window as any).initMap;
+      script.remove();
     };
   }, []);
 

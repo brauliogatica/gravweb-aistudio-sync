@@ -12,8 +12,7 @@ The frontend reads one public variable:
 VITE_LOCAL_PROCESSOR_URL=
 ```
 
-Vite maps it internally to `process.env.REACT_APP_LOCAL_PROCESSOR_URL` for the
-legacy migrated frontend.
+Vite exposes it in the browser as `import.meta.env.VITE_LOCAL_PROCESSOR_URL`.
 
 ## Endpoints
 
