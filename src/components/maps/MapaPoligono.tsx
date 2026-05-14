@@ -139,13 +139,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
         zoomControl: true,
         mapTypeControl: true,
         mapTypeControlOptions: {
-          style: window.google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-          mapTypeIds: [
-            window.google.maps.MapTypeId.ROADMAP,
-            window.google.maps.MapTypeId.SATELLITE,
-            window.google.maps.MapTypeId.TERRAIN,
-            window.google.maps.MapTypeId.HYBRID,
-          ],
+          mapTypeIds: ["roadmap", "satellite", "terrain", "hybrid"],
         },
         scaleControl: true,
         streetViewControl: false,
