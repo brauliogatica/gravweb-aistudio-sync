@@ -52,6 +52,7 @@ En `/particles`:
 
 - El poligono se cierra antes de enviarse a Grasshopper.
 - El solve usa `pointer` devuelto por `/io` y no envia `filename`, igual que el cuerpo legacy validado.
+- Los campos `projectId`, `projectName`, `projectDescription` y `userId` se envian como `"1"`, igual que produccion legacy; el cluster convierte esos textos a numero internamente.
 - Si `/grasshopper` responde error, la UI muestra el inicio del cuerpo de respuesta para poder diagnosticar desde AI Studio.
 
 ## Nota sobre peso
