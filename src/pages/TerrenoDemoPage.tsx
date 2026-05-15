@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
 import WaterParticle from "../components/waterParticles/WaterParticle";
@@ -12,7 +12,13 @@ import {
 } from "../services/rhinoComputeService";
 import type { GrasshopperTerrainResult, ProcessingRequest } from "../types/types";
 
-type ViewState = "idle" | "loading-demo" | "processing" | "ready" | "error";
+type ViewState =
+  | "idle"
+  | "awaiting-process"
+  | "loading-demo"
+  | "processing"
+  | "ready"
+  | "error";
 
 const hasTerrainData = (value: unknown) => {
   if (!value) return false;
@@ -90,10 +96,28 @@ function TerrenoDemoPage() {
   }, [demoMode, dispatch]);
 
   useEffect(() => {
-    if (demoMode || !processingRequest) return;
-    if (lastProcessedRequestId === processingRequest.id) return;
+    if (demoMode || !processingRequest || terrainReady) return;
+    if (viewState === "processing" || viewState === "error") return;
 
-    let cancelled = false;
+    setViewState("awaiting-process");
+    setMessage(
+      "Solicitud recibida. Puedes procesar con Grasshopper o cargar el terreno demo."
+    );
+    setError("");
+  }, [demoMode, processingRequest, terrainReady, viewState]);
+
+  const processWithGrasshopper = useCallback(() => {
+    if (!processingRequest) {
+      setError("No hay una solicitud de terreno activa.");
+      setViewState("error");
+      return;
+    }
+
+    if (lastProcessedRequestId === processingRequest.id && viewState === "ready") {
+      return;
+    }
+
+    let active = true;
     setLastProcessedRequestId(processingRequest.id);
     setViewState("processing");
     setMessage("Procesando terreno con Grasshopper...");
@@ -109,7 +133,7 @@ function TerrenoDemoPage() {
 
     solveTerrainWithGrasshopper(processingRequest, project)
       .then(({ result: grasshopperResult, updates }) => {
-        if (cancelled) return;
+        if (!active) return;
 
         Object.entries(updates).forEach(([key, value]) => {
           dispatch(updateProject({ key, value }));
@@ -142,7 +166,7 @@ function TerrenoDemoPage() {
         setViewState("ready");
       })
       .catch((solveError) => {
-        if (cancelled) return;
+        if (!active) return;
         setError(
           solveError instanceof Error
             ? solveError.message
@@ -153,14 +177,14 @@ function TerrenoDemoPage() {
       });
 
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, [
-    demoMode,
     dispatch,
     lastProcessedRequestId,
     processingRequest,
     project,
+    viewState,
   ]);
 
   const openDemo = () => {
@@ -208,6 +232,7 @@ function TerrenoDemoPage() {
       error={viewState === "error" ? error : ""}
       processingRequest={processingRequest}
       onOpenDemo={openDemo}
+      onProcess={processingRequest ? processWithGrasshopper : undefined}
       onRetry={processingRequest ? retryProcessing : undefined}
       onBack={() => navigate("/analisis")}
     />
@@ -220,6 +245,7 @@ function StatusScreen({
   error,
   processingRequest,
   onOpenDemo,
+  onProcess,
   onRetry,
   onBack,
 }: {
@@ -228,6 +254,7 @@ function StatusScreen({
   error: string;
   processingRequest: ProcessingRequest | null;
   onOpenDemo: () => void;
+  onProcess?: () => void;
   onRetry?: () => void;
   onBack: () => void;
 }) {
@@ -246,6 +273,11 @@ function StatusScreen({
         )}
 
         <div style={styles.actions}>
+          {onProcess && (
+            <button style={styles.primaryButton} onClick={onProcess}>
+              Procesar con Grasshopper
+            </button>
+          )}
           {onRetry && (
             <button style={styles.primaryButton} onClick={onRetry}>
               Reintentar procesamiento

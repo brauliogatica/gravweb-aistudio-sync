@@ -8,6 +8,9 @@ import { extractProjectUpdatesFromGrasshopper } from "./grasshopperProjectAdapte
 
 const RHINO_COMPUTE_URL =
   import.meta.env.VITE_RHINO_COMPUTE_URL?.trim().replace(/\/+$/, "") ?? "";
+const RHINO_REQUEST_TIMEOUT_MS = Number(
+  import.meta.env.VITE_RHINO_COMPUTE_TIMEOUT_MS ?? 90000
+);
 
 export interface GrasshopperRequest {
   definition: string;
@@ -28,6 +31,31 @@ export function getRhinoComputeUrl() {
   return RHINO_COMPUTE_URL;
 }
 
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs = RHINO_REQUEST_TIMEOUT_MS
+) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(
+        `Rhino Compute no respondio dentro de ${Math.round(timeoutMs / 1000)} segundos.`
+      );
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function checkRhinoComputeHealth() {
   if (!RHINO_COMPUTE_URL) {
     return {
@@ -38,10 +66,10 @@ export async function checkRhinoComputeHealth() {
   }
 
   try {
-    const response = await fetch(`${RHINO_COMPUTE_URL}/health`, {
+    const response = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/health`, {
       method: "GET",
       headers: { Accept: "application/json" },
-    });
+    }, 7000);
 
     return {
       available: response.ok,
@@ -69,7 +97,7 @@ export async function getRhinoIo(
   const url = `${RHINO_COMPUTE_URL}/io`;
   const body = JSON.stringify({ definition, inputs });
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: getHeaders(),
     body,
@@ -104,12 +132,12 @@ export async function probeRhinoComputeRoundTrip(
     const ioRequest = (ioModule as any).default ?? ioModule;
     const ioContent = ioRequest.Content ?? ioRequest;
 
-    const response = await fetch(`${RHINO_COMPUTE_URL}/io`, {
+    const response = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/io`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(ioContent),
       redirect: "follow",
-    });
+    }, 30000);
 
     const text = await response.text();
     const durationMs = Math.round(performance.now() - startedAt);
@@ -157,12 +185,12 @@ export async function solveTerrainWithGrasshopper(
   const ioRequest = (ioModule as any).default ?? ioModule;
   const ioContent = ioRequest.Content ?? ioRequest;
 
-  const definitionInfo = await fetch(`${RHINO_COMPUTE_URL}/io`, {
+  const definitionInfo = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/io`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(ioContent),
     redirect: "follow",
-  });
+  }, 30000);
 
   if (!definitionInfo.ok) {
     throw new Error(`Rhino /io respondio con ${definitionInfo.status}.`);
@@ -176,7 +204,7 @@ export async function solveTerrainWithGrasshopper(
     project
   );
 
-  const response = await fetch(`${RHINO_COMPUTE_URL}/grasshopper`, {
+  const response = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/grasshopper`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(solveBody),
@@ -333,7 +361,7 @@ export async function solveGrasshopper(
   const url = `${RHINO_COMPUTE_URL}/grasshopper`;
   const body = JSON.stringify({ definition, inputs });
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: getHeaders(),
     body,
