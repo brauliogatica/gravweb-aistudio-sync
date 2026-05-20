@@ -71,11 +71,17 @@ export async function checkRhinoComputeHealth() {
       headers: { Accept: "application/json" },
     }, 7000);
 
-    if (healthResponse.ok) {
+    if (healthResponse.ok || healthResponse.status === 404) {
       return {
         available: true,
-        status: String(healthResponse.status),
-        message: "Rhino Compute available.",
+        status:
+          healthResponse.status === 404
+            ? "health-missing-404"
+            : String(healthResponse.status),
+        message:
+          healthResponse.status === 404
+            ? "Rhino Compute reachable; /health is not implemented."
+            : "Rhino Compute available.",
       };
     }
 
