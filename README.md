@@ -11,6 +11,7 @@ La raiz del proyecto contiene la V2 minima:
 
 - `/analisis`: seleccion de terreno con navbar, herramientas y flujo de poligono.
 - `/particles`: terreno demo migrado con carga lazy.
+- `/proyectos`: dashboard minimo de proyectos por usuario local/dev.
 - `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
 - V4 agrega un adaptador no bloqueante para un procesador local futuro.
 - V5 agrega un backend local minimo en `local-processor/`.
@@ -56,8 +57,13 @@ Usar solo variables `VITE_*` en archivos locales `.env` no versionados:
 ```bash
 VITE_GOOGLE_MAPS_API_KEY=
 VITE_RHINO_COMPUTE_URL=
+VITE_RHINO_COMPUTE_TIMEOUT_MS=180000
 VITE_MAX_AREA_HECTARES=100
 ```
+
+El dashboard `/proyectos` puede conectarse opcionalmente a un backend compatible
+con la API heredada usando `VITE_API_BASE_URL`. No es obligatorio para abrir
+`/analisis` o `/particles`.
 
 `VITE_LOCAL_PROCESSOR_URL` queda reservado para un servicio local con:
 
@@ -73,6 +79,13 @@ VITE_RHINO_COMPUTE_URL=https://migration-postcards-warner-cheers.trycloudflare.c
 ```
 
 La URL debe responder `GET /health`, `POST /io` y `POST /grasshopper`.
+
+Para abrir un tunel nuevo y copiar la URL a AI Studio:
+
+```bash
+npm run tunnel:rhino
+npm run tunnel:rhino:test
+```
 
 Para probar el procesador local V5:
 

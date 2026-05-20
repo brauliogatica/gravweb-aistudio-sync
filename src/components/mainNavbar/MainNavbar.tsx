@@ -1,6 +1,6 @@
 import React from "react";
 import logoBlanco from "../../assets/isotipo_blanco2.png";
-import { useLocation } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import "./mainNavbar.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
@@ -8,8 +8,9 @@ import { useLoadDemoProject } from "../guardarProyectos/useLoadDemoProject";
 import CheckStatus from "../rhinoCompute/checkStatus";
 
 function MainNavbar() {
-  const location = useLocation();
   const loadDemoProject = useLoadDemoProject();
+  const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    `nav-link ${isActive ? "active" : ""}`;
 
   return (
     <nav
@@ -17,7 +18,7 @@ function MainNavbar() {
       id="mainNavbar"
     >
       <div className="container-fluid">
-        <a className="navbar-brand text-light" href="/analisis">
+        <Link className="navbar-brand text-light" to="/analisis">
           <img
             src={logoBlanco}
             alt="Logo"
@@ -26,7 +27,7 @@ function MainNavbar() {
             className="d-inline-block align-text-top"
           />
           Gravitacional
-        </a>
+        </Link>
         <>
           <button
             className="navbar-toggler navbar-dark"
@@ -42,24 +43,26 @@ function MainNavbar() {
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
               <li className="nav-item">
-                <a
-                  className={`nav-link ${location.pathname === "/analisis" ? "active" : ""}`}
-                  href="/analisis"
-                >
+                <NavLink className={navLinkClassName} to="/analisis">
                   Analisis
-                </a>
+                </NavLink>
               </li>
               <li className="nav-item">
-                <a
-                  className={`nav-link ${location.pathname === "/particles" ? "active" : ""}`}
-                  href="/particles?demo=1"
+                <NavLink className={navLinkClassName} to="/proyectos">
+                  Proyectos
+                </NavLink>
+              </li>
+              <li className="nav-item">
+                <NavLink
+                  className={navLinkClassName}
+                  to="/particles?demo=1"
                   onClick={(event) => {
                     event.preventDefault();
                     loadDemoProject();
                   }}
                 >
                   Terreno Demo
-                </a>
+                </NavLink>
               </li>
             </ul>
           </div>

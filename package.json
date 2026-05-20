@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "processor:dev": "node local-processor/server.mjs",
+    "tunnel:rhino": "powershell -ExecutionPolicy Bypass -File scripts/start-rhino-tunnel.ps1",
+    "tunnel:rhino:strict": "powershell -ExecutionPolicy Bypass -File scripts/start-rhino-tunnel.ps1 -StrictHealth",
+    "tunnel:rhino:test": "powershell -ExecutionPolicy Bypass -File scripts/test-rhino-tunnel.ps1",
     "build": "vite build",
     "preview": "vite preview --host=0.0.0.0",
     "lint": "tsc --noEmit"
