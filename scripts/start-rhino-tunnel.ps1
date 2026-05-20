@@ -95,20 +95,114 @@ function Read-TunnelUrl {
   return $null
 }
 
+function Test-RhinoEndpoint {
+  param(
+    [string]$BaseUrl,
+    [int]$TimeoutSec = 10
+  )
+
+  $cleanBaseUrl = $BaseUrl.TrimEnd("/")
+  $checks = @(
+    @{ Path = "/health"; Accept = "application/json" },
+    @{ Path = "/"; Accept = "text/html, text/plain, */*" }
+  )
+
+  foreach ($check in $checks) {
+    try {
+      $response = Invoke-RhinoWebRequest `
+        -Uri "$cleanBaseUrl$($check.Path)" `
+        -Accept $check.Accept `
+        -TimeoutSec $TimeoutSec
+
+      if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) {
+        return [pscustomobject]@{
+          Ok = $true
+          Path = $check.Path
+          StatusCode = $response.StatusCode
+          Bytes = $response.RawContentLength
+        }
+      }
+    } catch {
+      $script:lastRhinoEndpointError = $_.Exception.Message
+    }
+  }
+
+  return [pscustomobject]@{
+    Ok = $false
+    Path = ""
+    StatusCode = 0
+    Bytes = 0
+    Error = $script:lastRhinoEndpointError
+  }
+}
+
+function Invoke-RhinoWebRequest {
+  param(
+    [string]$Uri,
+    [string]$Accept,
+    [int]$TimeoutSec
+  )
+
+  try {
+    return Invoke-WebRequest `
+      -Uri $Uri `
+      -UseBasicParsing `
+      -TimeoutSec $TimeoutSec `
+      -Headers @{ Accept = $Accept }
+  } catch {
+    $normalError = $_.Exception.Message
+    $uriObject = [Uri]$Uri
+
+    if ($uriObject.Host -notlike "*.trycloudflare.com") {
+      throw $normalError
+    }
+
+    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+    if (-not $curl) {
+      throw $normalError
+    }
+
+    $dns = Resolve-DnsName $uriObject.Host -Server 1.1.1.1 -Type A -ErrorAction SilentlyContinue |
+      Select-Object -First 1
+
+    if (-not $dns) {
+      throw $normalError
+    }
+
+    $resolveArg = "$($uriObject.Host):443:$($dns.IPAddress)"
+    $curlResult = & $curl.Source `
+      --resolve $resolveArg `
+      --location `
+      --silent `
+      --output NUL `
+      --write-out "CODE:%{http_code};BYTES:%{size_download}" `
+      $Uri
+
+    if ($LASTEXITCODE -ne 0 -or $curlResult -notmatch "CODE:(\d+);BYTES:(\d+)") {
+      throw $normalError
+    }
+
+    return [pscustomobject]@{
+      StatusCode = [int]$Matches[1]
+      RawContentLength = [int64]$Matches[2]
+    }
+  }
+}
+
 if (-not $NoRestart) {
   Stop-PreviousTunnel
 }
 
 Remove-Item $outLog, $errLog, $urlPath -Force -ErrorAction SilentlyContinue
 
-try {
-  $localHealth = Invoke-WebRequest -Uri "$TargetUrl/health" -UseBasicParsing -TimeoutSec 5
-  Write-Host "Rhino Compute local: OK HTTP $($localHealth.StatusCode)"
-} catch {
+$localHealth = Test-RhinoEndpoint -BaseUrl $TargetUrl -TimeoutSec 5
+if ($localHealth.Ok) {
+  Write-Host "Rhino Compute local: OK $($localHealth.Path) HTTP $($localHealth.StatusCode)"
+} else {
   if ($StrictHealth) {
-    throw "Rhino Compute no responde en $TargetUrl/health. Levanta Rhino Compute antes de abrir el tunel."
+    throw "Rhino Compute no responde en $TargetUrl/health ni en $TargetUrl/. Levanta Rhino Compute antes de abrir el tunel."
   }
-  Write-Warning "Rhino Compute no responde todavia en $TargetUrl/health. El tunel se abrira igual."
+  Write-Warning "Rhino Compute no responde todavia en $TargetUrl/health ni en $TargetUrl/. El tunel se abrira igual."
 }
 
 $process = Start-Process `
@@ -164,9 +258,9 @@ Write-Host "Actualizado:"
 Write-Host "  $envPath"
 Write-Host "  $urlPath"
 
-try {
-  $remoteHealth = Invoke-WebRequest -Uri "$tunnelUrl/health" -UseBasicParsing -TimeoutSec 15
-  Write-Host "Rhino Compute via tunel: OK HTTP $($remoteHealth.StatusCode)"
-} catch {
-  Write-Warning "El tunel existe, pero /health no responde aun. Inicia Rhino Compute y vuelve a probar."
+$remoteHealth = Test-RhinoEndpoint -BaseUrl $tunnelUrl -TimeoutSec 15
+if ($remoteHealth.Ok) {
+  Write-Host "Rhino Compute via tunel: OK $($remoteHealth.Path) HTTP $($remoteHealth.StatusCode)"
+} else {
+  Write-Warning "El tunel existe, pero /health y / no responden aun. Inicia Rhino Compute y vuelve a probar."
 }

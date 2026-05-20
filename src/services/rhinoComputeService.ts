@@ -66,23 +66,59 @@ export async function checkRhinoComputeHealth() {
   }
 
   try {
-    const response = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/health`, {
+    const healthResponse = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/health`, {
       method: "GET",
       headers: { Accept: "application/json" },
     }, 7000);
 
+    if (healthResponse.ok) {
+      return {
+        available: true,
+        status: String(healthResponse.status),
+        message: "Rhino Compute available.",
+      };
+    }
+
+    const rootResponse = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/`, {
+      method: "GET",
+      headers: { Accept: "text/html, text/plain, */*" },
+    }, 7000);
+
     return {
-      available: response.ok,
-      status: String(response.status),
-      message: response.ok ? "Rhino Compute available." : response.statusText,
+      available: rootResponse.ok,
+      status: rootResponse.ok
+        ? `root-${rootResponse.status}`
+        : String(healthResponse.status),
+      message: rootResponse.ok
+        ? "Rhino Compute available at root endpoint."
+        : healthResponse.statusText,
     };
   } catch (error) {
-    return {
-      available: false,
-      status: "unreachable",
-      message:
-        error instanceof Error ? error.message : "Rhino Compute unreachable.",
-    };
+    try {
+      const rootResponse = await fetchWithTimeout(`${RHINO_COMPUTE_URL}/`, {
+        method: "GET",
+        headers: { Accept: "text/html, text/plain, */*" },
+      }, 7000);
+
+      return {
+        available: rootResponse.ok,
+        status: rootResponse.ok ? `root-${rootResponse.status}` : "unreachable",
+        message: rootResponse.ok
+          ? "Rhino Compute available at root endpoint."
+          : "Rhino Compute unreachable.",
+      };
+    } catch (rootError) {
+      return {
+        available: false,
+        status: "unreachable",
+        message:
+          rootError instanceof Error
+            ? rootError.message
+            : error instanceof Error
+              ? error.message
+              : "Rhino Compute unreachable.",
+      };
+    }
   }
 }
 
