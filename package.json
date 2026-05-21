@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "backend:dev": "node local-backend/server.mjs",
     "processor:dev": "node local-processor/server.mjs",
+    "tunnel:backend": "powershell -ExecutionPolicy Bypass -File scripts/start-backend-tunnel.ps1",
+    "tunnel:backend:strict": "powershell -ExecutionPolicy Bypass -File scripts/start-backend-tunnel.ps1 -StrictHealth",
+    "tunnel:backend:test": "powershell -ExecutionPolicy Bypass -File scripts/test-backend-tunnel.ps1",
     "tunnel:rhino": "powershell -ExecutionPolicy Bypass -File scripts/start-rhino-tunnel.ps1",
     "tunnel:rhino:strict": "powershell -ExecutionPolicy Bypass -File scripts/start-rhino-tunnel.ps1 -StrictHealth",
     "tunnel:rhino:test": "powershell -ExecutionPolicy Bypass -File scripts/test-rhino-tunnel.ps1",

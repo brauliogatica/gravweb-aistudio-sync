@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import { createProject } from "../../services/ProjectService";
 import { Project } from "../../types/types";
-import { useProject } from "./ProjectContext";
-import { useAuth0 } from "@auth0/auth0-react";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../redux/store/store";
 import { updateProject } from "../../redux/slices/projectSlice";
+import { useCurrentUser } from "../../auth/useCurrentUser";
 
 const ProjectForm: React.FC = () => {
-  const { user, isAuthenticated } = useAuth0();
+  const { userId } = useCurrentUser();
   const project = useSelector((state: RootState) => state.project);
   const dispatch = useDispatch();
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isSaving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: project.name,
     description: project.description,
@@ -30,44 +31,70 @@ const ProjectForm: React.FC = () => {
     dispatch(updateProject({ key: field, value: formData[field as keyof typeof formData] }));
   };
 
-  const isValidProject = (): boolean => {
-    return !!project.name && !!project.userId && project.coordinates.length > 0;
+  const buildProjectToSave = (): Project => {
+    const now = new Date().toISOString();
+
+    return {
+      ...project,
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      userId: userId || project.userId || "local-dev-user",
+      createdAt: project.createdAt || now,
+      updatedAt: now,
+    };
   };
 
-  const saveProject = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    // if (!isValidProject()) {
-    //   alert("Faltan datos para guardar el proyecto");
-    // } else {
-    createProject(project);
-    // try {
-    //   const response = await fetch("/api/projects", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify(project),
-    //   });
+  const isValidProject = (projectToSave: Project): boolean => {
+    return !!projectToSave.name && !!projectToSave.userId;
+  };
 
-    //   if (response.ok) {
-    //     alert("Proyecto guardado exitosamente");
-    //   } else {
-    //     console.error("Error al guardar el proyecto:", await response.text());
-    //   }
-    // } catch (error) {
-    //   console.error("Error en la solicitud:", error);
-    // }
-    // }
+  const saveProject = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const projectToSave = buildProjectToSave();
+
+    if (!isValidProject(projectToSave)) {
+      setStatusMessage("Agrega un nombre antes de guardar.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setStatusMessage(null);
+      const savedProject = await createProject(projectToSave);
+
+      if (savedProject._id) {
+        dispatch(updateProject({ key: "_id", value: savedProject._id }));
+      }
+      dispatch(updateProject({ key: "name", value: savedProject.name }));
+      dispatch(updateProject({ key: "description", value: savedProject.description }));
+      dispatch(updateProject({ key: "userId", value: savedProject.userId }));
+      dispatch(updateProject({ key: "updatedAt", value: savedProject.updatedAt }));
+
+      setStatusMessage("Proyecto guardado.");
+    } catch (error) {
+      console.error("Error guardando proyecto:", error);
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar el proyecto."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div>
       <form>
         <div className="mb-3">
-          <img
-            src={project.thumbnail}
-            alt="Miniatura"
-            onLoad={() => console.log("Miniatura cargada")}
-            onError={() => console.log("Error al cargar la miniatura")}
-          />
+          {project.thumbnail && (
+            <img
+              src={project.thumbnail}
+              alt="Miniatura"
+              onLoad={() => console.log("Miniatura cargada")}
+              onError={() => console.log("Error al cargar la miniatura")}
+            />
+          )}
           <label htmlFor="inputName" className="form-label">
             Nombre del proyecto
           </label>
@@ -98,8 +125,14 @@ const ProjectForm: React.FC = () => {
           />
         </div>
 
-        <button onClick={saveProject} className="btn btn-success">
-          Guardar Proyecto
+        {statusMessage && (
+          <div className="alert alert-info py-2" role="status">
+            {statusMessage}
+          </div>
+        )}
+
+        <button onClick={saveProject} className="btn btn-success" disabled={isSaving}>
+          {isSaving ? "Guardando..." : "Guardar Proyecto"}
         </button>
       </form>
 

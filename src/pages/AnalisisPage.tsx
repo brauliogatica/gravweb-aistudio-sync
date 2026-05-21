@@ -2,22 +2,20 @@ import React, { useEffect } from "react";
 import "../styles/analisisModelo.css";
 // import { createProject, updateProject } from "../services/ProjectService";
 import { updateProject } from "../redux/slices/projectSlice";
-import { useAuth0 } from "@auth0/auth0-react";
 import AnalisisPrincipal from "../components/analisis/AnalisisPrincipal";
 import { ProjectProvider } from "../components/guardarProyectos/ProjectContext";
 import { useDispatch } from "react-redux";
-import { isLocalDevAuthEnabled, LOCAL_DEV_USER } from "../auth/localDevAuth.ts";
+import { useCurrentUser } from "../auth/useCurrentUser";
 
 const AnalisisModelo = () => {
-  const { user, isAuthenticated, isLoading } = useAuth0();
+  const { userId, isAuthenticated } = useCurrentUser();
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const activeUser = isLocalDevAuthEnabled() ? LOCAL_DEV_USER : user;
-    if ((isLocalDevAuthEnabled() || isAuthenticated) && activeUser?.sub) {
-      dispatch(updateProject({ key: "userId", value: activeUser.sub }));
+    if (isAuthenticated && userId) {
+      dispatch(updateProject({ key: "userId", value: userId }));
     }
-  }, [isAuthenticated, user, dispatch]);
+  }, [isAuthenticated, userId, dispatch]);
 
   return (
     <div>

@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { deleteProject, getProjectsByUserId } from "../../services/ProjectService";
+import {
+  deleteProject,
+  getProjectById,
+  getProjectsByUserId,
+} from "../../services/ProjectService";
 import { setProject } from "../../redux/slices/projectSlice";
 import { Project } from "../../types/types";
+import { useCurrentUser } from "../../auth/useCurrentUser";
 import Loader from "../usabilidad/Loader";
 import "./ProjectList.css";
 
@@ -14,14 +18,15 @@ const ProjectList: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [isOpening, setOpening] = useState(false);
 
-  const { user, isAuthenticated } = useAuth0();
+  const { userId, isAuthenticated } = useCurrentUser();
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjectsByUserId = async () => {
-      if (!isAuthenticated || !user?.sub) {
+      if (!isAuthenticated || !userId) {
         setProjects([]);
         setLoading(false);
         return;
@@ -29,7 +34,7 @@ const ProjectList: React.FC = () => {
 
       try {
         setLoading(true);
-        const projectsData = await getProjectsByUserId(user.sub);
+        const projectsData = await getProjectsByUserId(userId);
         setProjects(projectsData);
       } catch (error) {
         console.error("Error buscando proyectos:", error);
@@ -44,7 +49,7 @@ const ProjectList: React.FC = () => {
     };
 
     fetchProjectsByUserId();
-  }, [user?.sub, isAuthenticated]);
+  }, [userId, isAuthenticated]);
 
   const handleDeleteProject = async () => {
     if (!selectedProject?._id) {
@@ -84,10 +89,25 @@ const ProjectList: React.FC = () => {
       year: "numeric",
     });
 
-  const handleConfirmOpen = () => {
-    if (selectedProject) {
-      dispatch(setProject(selectedProject));
+  const handleConfirmOpen = async () => {
+    if (!selectedProject?._id) {
+      return;
+    }
+
+    try {
+      setOpening(true);
+      const hydratedProject = await getProjectById(selectedProject._id);
+      dispatch(setProject(hydratedProject));
       navigate("/particles");
+    } catch (error) {
+      console.error("Error abriendo proyecto:", error);
+      setAlertMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo abrir el proyecto"
+      );
+    } finally {
+      setOpening(false);
     }
   };
 
@@ -235,8 +255,9 @@ const ProjectList: React.FC = () => {
                   type="button"
                   className="btn btn-primary"
                   onClick={handleConfirmOpen}
+                  disabled={isOpening}
                 >
-                  Abrir proyecto
+                  {isOpening ? "Abriendo..." : "Abrir proyecto"}
                 </button>
               </div>
             </div>

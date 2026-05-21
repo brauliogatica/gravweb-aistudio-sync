@@ -15,6 +15,8 @@ La raiz del proyecto contiene la V2 minima:
 - `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
 - V4 agrega un adaptador no bloqueante para un procesador local futuro.
 - V5 agrega un backend local minimo en `local-processor/`.
+- V10 agrega un backend local file-backed en `local-backend/` para proyectos,
+  auth local y orquestador stub sin Mongo.
 - Los datos demo de `public/demo` se guardan como `*.json.gz` para reducir
   el peso de AI Studio; el loader los descomprime en el navegador.
 
@@ -44,6 +46,7 @@ exacto `VITE_GOOGLE_MAPS_API_KEY`. La app lee esa configuracion desde
 ```bash
 npm install
 npm run dev
+npm run backend:dev
 npm run processor:dev
 npm run build
 npm run lint
@@ -56,14 +59,33 @@ Usar solo variables `VITE_*` en archivos locales `.env` no versionados:
 
 ```bash
 VITE_GOOGLE_MAPS_API_KEY=
+VITE_API_BASE_URL=http://127.0.0.1:3100
 VITE_RHINO_COMPUTE_URL=
 VITE_RHINO_COMPUTE_TIMEOUT_MS=180000
 VITE_MAX_AREA_HECTARES=100
 ```
 
-El dashboard `/proyectos` puede conectarse opcionalmente a un backend compatible
-con la API heredada usando `VITE_API_BASE_URL`. No es obligatorio para abrir
-`/analisis` o `/particles`.
+El dashboard `/proyectos` se conecta opcionalmente al backend local V10 con
+`VITE_API_BASE_URL`. No es obligatorio para abrir `/analisis` o `/particles`.
+
+Para probar proyectos locales sin Mongo:
+
+```bash
+npm run backend:dev
+```
+
+El backend escucha en `http://127.0.0.1:3100` y guarda datos en
+`G:\backendgravi` si esa carpeta existe. Los artefactos pesados se guardan como
+`artifacts/<projectId>.json.gz`.
+
+Para conectar `/proyectos` desde AI Studio al backend de este PC:
+
+```bash
+npm run tunnel:backend:strict
+npm run tunnel:backend:test
+```
+
+Copiar la URL generada en `VITE_API_BASE_URL`.
 
 `VITE_LOCAL_PROCESSOR_URL` queda reservado para un servicio local con:
 
