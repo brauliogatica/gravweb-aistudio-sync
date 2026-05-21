@@ -168,8 +168,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
       }
 
       if (typeof window.google?.maps?.Map !== "function") {
-        console.error("Google Maps no cargo la libreria maps.");
-        return;
+        throw new Error("Google Maps no cargo la libreria maps.");
       }
 
       Paths = [];
@@ -581,6 +580,10 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
         })
         .catch((error) => {
           mapInitStartedRef.current = false;
+          if (!cancelled && attempt < 80) {
+            window.setTimeout(() => startMap(attempt + 1), 150);
+            return;
+          }
           console.error("No se pudo inicializar Google Maps.", error);
         });
     };
