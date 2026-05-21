@@ -217,6 +217,45 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
 
       if (isEmbeddedPreview()) {
         rememberPreviewReturnTo(returnTo);
+
+        try {
+          await auth0.loginWithPopup(
+            {
+              authorizationParams,
+            },
+            {
+              timeoutInSeconds: 120,
+            }
+          );
+
+          const claims = await auth0.getIdTokenClaims();
+          const user = pickAuthUser({
+            sub: claims?.sub ?? auth0.user?.sub,
+            name:
+              typeof claims?.name === "string"
+                ? claims.name
+                : auth0.user?.name,
+            email:
+              typeof claims?.email === "string"
+                ? claims.email
+                : auth0.user?.email,
+            picture:
+              typeof claims?.picture === "string"
+                ? claims.picture
+                : auth0.user?.picture,
+          });
+
+          if (user) {
+            savePreviewSession(user);
+          }
+
+          return;
+        } catch (error) {
+          console.warn(
+            "Gravweb: Auth0 popup no disponible, usando redirect externo.",
+            error
+          );
+        }
       }
 
       await auth0.loginWithRedirect({
