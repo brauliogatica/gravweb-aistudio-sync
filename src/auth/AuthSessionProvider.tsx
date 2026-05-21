@@ -139,6 +139,11 @@ async function openAuthUrl(url: string) {
   window.location.assign(url);
 }
 
+function openUrlInCurrentWindow(url: string) {
+  if (typeof window === "undefined") return;
+  window.location.assign(url);
+}
+
 function normalizeLocalUser(user: LocalAuthUser | null): AuthSessionUser | undefined {
   if (!user) return undefined;
   return user;
@@ -269,11 +274,12 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     clearPreviewSession();
+    clearPreviewReturnTo();
     auth0.logout({
       logoutParams: {
         returnTo: typeof window === "undefined" ? undefined : window.location.origin,
       },
-      openUrl: openAuthUrl,
+      openUrl: openUrlInCurrentWindow,
     });
   }, [auth0]);
 

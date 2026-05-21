@@ -36,6 +36,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
   const isValidRef = useRef(false);
   const selectedPolygonRef = useRef<any>(null);
   const processingRef = useRef(false);
+  const mapInitStartedRef = useRef(false);
 
   const handleButtonProcesar = () => {
     console.info("Gravweb: navegando a /particles");
@@ -543,8 +544,45 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     };
 
     // Cargar el script de Google Maps
-    const startMap = () => {
-      void (window as any).initMap?.();
+    const startMap = (attempt = 0) => {
+      if (cancelled || mapInitStartedRef.current) return;
+
+      const mapElement = document.getElementById("map");
+      if (!mapElement || mapElement.offsetHeight === 0) {
+        if (attempt < 60) {
+          window.setTimeout(() => startMap(attempt + 1), 100);
+        }
+        return;
+      }
+
+      const mapsReady =
+        window.google?.maps?.importLibrary ||
+        typeof window.google?.maps?.Map === "function";
+
+      if (!mapsReady) {
+        if (attempt < 80) {
+          window.setTimeout(() => startMap(attempt + 1), 100);
+        } else {
+          console.error("Google Maps no quedo disponible para inicializar el mapa.");
+        }
+        return;
+      }
+
+      mapInitStartedRef.current = true;
+      Promise.resolve((window as any).initMap?.())
+        .then(() => {
+          window.setTimeout(() => {
+            const activeMap = mapRef.current;
+            if (activeMap && window.google?.maps?.event) {
+              window.google.maps.event.trigger(activeMap, "resize");
+              activeMap.setCenter(centroInicio);
+            }
+          }, 250);
+        })
+        .catch((error) => {
+          mapInitStartedRef.current = false;
+          console.error("No se pudo inicializar Google Maps.", error);
+        });
     };
     const existingScript = document.getElementById(
       GOOGLE_MAPS_SCRIPT_ID
@@ -553,14 +591,15 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     if (window.google?.maps?.importLibrary) {
       startMap();
     } else if (existingScript) {
-      existingScript.addEventListener("load", startMap, { once: true });
+      startMap();
+      existingScript.addEventListener("load", () => startMap(), { once: true });
     } else {
       const script = document.createElement("script");
       script.id = GOOGLE_MAPS_SCRIPT_ID;
       script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&libraries=drawing,places,geometry&v=weekly&loading=async`;
       script.async = true;
       script.defer = true;
-      script.onload = startMap;
+      script.onload = () => startMap();
       script.onerror = () => {
         console.error("No se pudo cargar Google Maps. Revisa VITE_GOOGLE_MAPS_API_KEY.");
       };
@@ -570,6 +609,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     return () => {
       // Limpia la función global al desmontar el componente
       cancelled = true;
+      mapInitStartedRef.current = false;
     };
   }, []);
 
