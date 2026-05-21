@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
 import store from "./redux/store/store";
 import App from "./App";
+import { AuthSessionProvider } from "./auth/AuthSessionProvider";
 import "./index.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
@@ -18,7 +19,9 @@ createRoot(rootElement).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <App />
+        <AuthSessionProvider>
+          <App />
+        </AuthSessionProvider>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>

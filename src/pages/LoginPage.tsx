@@ -5,7 +5,7 @@ import logoBlanco from "../assets/Logo_blanco.png";
 import carousel1 from "../assets/carousel1.png";
 import carousel2 from "../assets/carousel2.png";
 import carousel3 from "../assets/carousel3.png";
-import { saveLocalAuthUser } from "../auth/localAuthSession";
+import { useAuthSession } from "../auth/AuthSessionProvider";
 import { useCurrentUser } from "../auth/useCurrentUser";
 import "./LoginPage.css";
 
@@ -31,6 +31,7 @@ const slides = [
 
 function LoginPage() {
   const { isAuthenticated } = useCurrentUser();
+  const { login, source } = useAuthSession();
   const navigate = useNavigate();
   const location = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -55,12 +56,15 @@ function LoginPage() {
     return <Navigate to="/analisis" replace />;
   }
 
-  const enterWithLocalSession = (mode: "login" | "register") => {
-    saveLocalAuthUser({
-      name: mode === "register" ? "Usuario Gravitacional" : "Gravitacional Local",
-      email: "local@gravitacional.dev",
+  const enterWithAuth = async (mode: "login" | "register") => {
+    await login({
+      returnTo: from,
+      screenHint: mode === "register" ? "signup" : undefined,
     });
-    navigate(from, { replace: true });
+
+    if (source === "local-dev") {
+      navigate(from, { replace: true });
+    }
   };
 
   return (
@@ -72,14 +76,14 @@ function LoginPage() {
             <button
               type="button"
               className="btn btn-primary loginButtonOriginal"
-              onClick={() => enterWithLocalSession("login")}
+              onClick={() => void enterWithAuth("login")}
             >
               Iniciar sesión
             </button>
             <button
               type="button"
               className="btn btn-primary loginButtonOriginal"
-              onClick={() => enterWithLocalSession("register")}
+              onClick={() => void enterWithAuth("register")}
             >
               Registrarse
             </button>

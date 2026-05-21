@@ -6,12 +6,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { useLoadDemoProject } from "../guardarProyectos/useLoadDemoProject";
 import CheckStatus from "../rhinoCompute/checkStatus";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuthSession } from "../../auth/AuthSessionProvider";
 import { useCurrentUser } from "../../auth/useCurrentUser";
 
 function MainNavbar() {
   const loadDemoProject = useLoadDemoProject();
-  const { logout } = useAuth0();
+  const { logout } = useAuthSession();
   const { user } = useCurrentUser();
   const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
     `nav-link ${isActive ? "active" : ""}`;

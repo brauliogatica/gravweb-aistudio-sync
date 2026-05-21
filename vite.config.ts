@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => {
     REACT_APP_BACKEND_URL: env.VITE_API_BASE_URL ?? "",
     REACT_APP_RHINO_COMPUTE_URL: env.VITE_RHINO_COMPUTE_URL ?? "",
     REACT_APP_RHINO_COMPUTE_KEY: "",
-    REACT_APP_AUTH0_DOMAIN: "",
-    REACT_APP_CLIENT_ID: "",
+    REACT_APP_AUTH0_DOMAIN: env.VITE_AUTH0_DOMAIN ?? "",
+    REACT_APP_CLIENT_ID: env.VITE_AUTH0_CLIENT_ID ?? "",
     REACT_APP_EOS_API_KEY: "",
     REACT_APP_OPENTOPOGRAPHY_API_KEY: "",
     REACT_APP_MAX_AREA: env.VITE_MAX_AREA ?? "10000",
@@ -29,7 +29,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
-        "@auth0/auth0-react": path.resolve(__dirname, "./src/auth/Auth0Stub.jsx"),
       },
     },
   };

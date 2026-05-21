@@ -1,13 +1,13 @@
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuthSession } from "./AuthSessionProvider";
 
 export function useCurrentUser() {
-  const { user, isAuthenticated, isLoading } = useAuth0();
+  const { user, userId, isAuthenticated, isLoading, source } = useAuthSession();
 
   return {
     user,
-    userId: user?.sub,
+    userId,
     isAuthenticated,
     isLoading,
-    source: "local-auth",
+    source,
   };
 }
