@@ -62,6 +62,27 @@ function getRedirectUri() {
   return import.meta.env.VITE_AUTH0_REDIRECT_URI?.trim() || window.location.origin;
 }
 
+function isEmbeddedPreview() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
+async function openAuthUrl(url: string) {
+  if (typeof window === "undefined") return;
+
+  if (isEmbeddedPreview()) {
+    const popup = window.open(url, "_blank", "noopener,noreferrer");
+    if (popup) return;
+  }
+
+  window.location.assign(url);
+}
+
 function normalizeLocalUser(user: LocalAuthUser | null): AuthSessionUser | undefined {
   if (!user) return undefined;
   return user;
@@ -85,6 +106,7 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
       await auth0.loginWithRedirect({
         appState: { returnTo: options?.returnTo ?? "/analisis" },
         authorizationParams,
+        openUrl: openAuthUrl,
       });
     },
     [auth0]
@@ -95,6 +117,7 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
       logoutParams: {
         returnTo: typeof window === "undefined" ? undefined : window.location.origin,
       },
+      openUrl: openAuthUrl,
     });
   }, [auth0]);
 
@@ -163,8 +186,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     <Auth0Provider
       domain={auth0Domain}
       clientId={auth0ClientId}
-      cacheLocation="localstorage"
-      useRefreshTokens
+      useCookiesForTransactions
       authorizationParams={{
         redirect_uri: getRedirectUri(),
         ...(auth0Audience ? { audience: auth0Audience } : {}),
