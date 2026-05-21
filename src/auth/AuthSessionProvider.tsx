@@ -275,6 +275,15 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearPreviewSession();
     clearPreviewReturnTo();
+
+    if (isEmbeddedPreview()) {
+      void auth0.logout({ openUrl: false });
+      if (typeof window !== "undefined") {
+        window.location.replace("/login");
+      }
+      return;
+    }
+
     auth0.logout({
       logoutParams: {
         returnTo: typeof window === "undefined" ? undefined : window.location.origin,
