@@ -1,18 +1,39 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import logoBlanco from "../assets/isotipo_blanco2.png";
-import { saveDefaultLocalAuthUser, saveLocalAuthUser } from "../auth/localAuthSession";
+import fondoCarousel from "../assets/fondoCarousel.jpg";
+import logoBlanco from "../assets/Logo_blanco.png";
+import carousel1 from "../assets/carousel1.png";
+import carousel2 from "../assets/carousel2.png";
+import carousel3 from "../assets/carousel3.png";
+import { saveLocalAuthUser } from "../auth/localAuthSession";
 import { useCurrentUser } from "../auth/useCurrentUser";
 import "./LoginPage.css";
+
+const slides = [
+  {
+    image: carousel1,
+    title: "Visualiza la distribución del agua",
+    description: "Crea zonas de captación, acumulación y riego.",
+  },
+  {
+    image: carousel2,
+    title: "Automatiza el proceso hidrológico",
+    description:
+      "Genera rápidamente patrones de diseño óptimos para cualquier terreno.",
+  },
+  {
+    image: carousel3,
+    title: "Utiliza Realidad Aumentada",
+    description:
+      "Digitaliza tu gestión de aguas de lluvia en tu terreno con tecnología IA.",
+  },
+];
 
 function LoginPage() {
   const { isAuthenticated } = useCurrentUser();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("local@gravitacional.dev");
-  const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const from =
     typeof location.state === "object" &&
@@ -22,111 +43,85 @@ function LoginPage() {
       ? location.state.from
       : "/analisis";
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentSlide((slide) => (slide + 1) % slides.length);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   if (isAuthenticated) {
     return <Navigate to="/analisis" replace />;
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (!cleanEmail || !cleanEmail.includes("@")) {
-      setError("Ingresa un correo valido.");
-      return;
-    }
-
+  const enterWithLocalSession = (mode: "login" | "register") => {
     saveLocalAuthUser({
-      name: mode === "register" ? name : name || cleanEmail.split("@")[0],
-      email: cleanEmail,
+      name: mode === "register" ? "Usuario Gravitacional" : "Gravitacional Local",
+      email: "local@gravitacional.dev",
     });
-
-    navigate(from, { replace: true });
-  };
-
-  const handleQuickAccess = () => {
-    saveDefaultLocalAuthUser();
     navigate(from, { replace: true });
   };
 
   return (
-    <main className="login-page">
-      <section className="login-panel" aria-label="Autenticacion Gravitacional">
-        <div className="login-brand">
-          <img src={logoBlanco} alt="Gravitacional" />
-          <span>Gravitacional</span>
+    <main className="componenteLogin">
+      <section className="componenteInputs" aria-label="Acceso Gravitacional">
+        <div className="containerInicio">
+          <div className="inicio">
+            <h1 className="titleInicio">Inicia sesión con tu cuenta</h1>
+            <button
+              type="button"
+              className="btn btn-primary loginButtonOriginal"
+              onClick={() => enterWithLocalSession("login")}
+            >
+              Iniciar sesión
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary loginButtonOriginal"
+              onClick={() => enterWithLocalSession("register")}
+            >
+              Registrarse
+            </button>
+          </div>
         </div>
-
-        <div className="login-copy">
-          <h1>{mode === "login" ? "Inicia sesion" : "Crea tu cuenta"}</h1>
-          <p>
-            Cada terreno procesado quedara asociado al usuario activo en este
-            equipo.
-          </p>
-        </div>
-
-        <div className="login-tabs" role="tablist">
-          <button
-            type="button"
-            className={mode === "login" ? "active" : ""}
-            onClick={() => setMode("login")}
-          >
-            Iniciar sesion
-          </button>
-          <button
-            type="button"
-            className={mode === "register" ? "active" : ""}
-            onClick={() => setMode("register")}
-          >
-            Registrarse
-          </button>
-        </div>
-
-        <form className="login-form" onSubmit={handleSubmit}>
-          {mode === "register" && (
-            <label>
-              Nombre
-              <input
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                autoComplete="name"
-              />
-            </label>
-          )}
-
-          <label>
-            Correo
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              required
-            />
-          </label>
-
-          {error && <div className="login-error">{error}</div>}
-
-          <button type="submit" className="login-primary">
-            {mode === "login" ? "Entrar" : "Crear y entrar"}
-          </button>
-
-          <button
-            type="button"
-            className="login-secondary"
-            onClick={handleQuickAccess}
-          >
-            Entrar como desarrollo local
-          </button>
-        </form>
       </section>
 
-      <section className="login-preview" aria-hidden="true">
-        <div className="login-preview-card">
-          <span>Terrenos por usuario</span>
-          <strong>/proyectos</strong>
+      <section
+        className="componenteCarousel"
+        style={{ backgroundImage: `url("${fondoCarousel}")` }}
+        aria-label="Informacion Gravitacional"
+      >
+        <div className="componenteCarouselInterior">
+          <div className="componenteInterior">
+            <div className="divVertical">
+              <div className="carousel">
+                <div className="slide">
+                  <img className="LogoBlanco" src={logoBlanco} alt="Gravitacional" />
+                  <img
+                    className="imgCarousel"
+                    src={slides[currentSlide].image}
+                    alt={slides[currentSlide].title}
+                  />
+                  <h4>{slides[currentSlide].title}</h4>
+                  <p className="cssp">{slides[currentSlide].description}</p>
+                </div>
+              </div>
+
+              <div className="navigation" aria-label="Seleccionar diapositiva">
+                {slides.map((slide, index) => (
+                  <button
+                    key={slide.title}
+                    type="button"
+                    className={`dot ${index === currentSlide ? "active" : ""}`}
+                    onClick={() => setCurrentSlide(index)}
+                    aria-label={`Mostrar ${slide.title}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="login-grid" />
       </section>
     </main>
   );
