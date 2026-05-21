@@ -2606,10 +2606,10 @@ const WaterParticle = () => {
         {/* <EchartsViewer setLoadingMessage={setLoadingMessage} setLoadingStyle={setLoadingStyle} /> */}
 
       </div>
-      {/* <div id="visor-proyecto" className="card">
+      <div id="visor-proyecto" className="card">
         <h4>Datos del Proyecto</h4>
         <ProjectForm />
-      </div> */}
+      </div>
 
       <div id="info">Gravitacional - Workspace</div>
       <div id="subtitle">

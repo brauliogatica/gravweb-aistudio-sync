@@ -544,10 +544,14 @@ button.active {
   width: 100%;
   max-width: 600px;
   min-height: 100px;
-  height: 300px;
+  max-height: calc(100vh - 110px);
   position: absolute;
   z-index: 1000;
   right: 50px;
+  top: 70px;
+  overflow: auto;
+  padding: 16px;
+  background: rgba(248, 251, 255, 0.96);
 }
 
 #visor-proyecto pre {
