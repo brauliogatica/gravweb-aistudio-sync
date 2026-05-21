@@ -52,6 +52,10 @@ const auth0Domain =
 const auth0ClientId =
   import.meta.env.VITE_AUTH0_CLIENT_ID?.trim() || defaultAuth0ClientId;
 const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE?.trim() ?? "";
+const AUTH0_PREVIEW_SESSION_KEY = "gravweb.auth0PreviewSession";
+const AUTH0_PREVIEW_RETURN_TO_KEY = "gravweb.auth0PreviewReturnTo";
+const AUTH0_PREVIEW_EVENT = "gravweb-auth0-preview-session";
+const AUTH0_PREVIEW_MESSAGE = "gravweb-auth0-preview-authenticated";
 
 function isAuth0Enabled() {
   return Boolean(auth0Domain && auth0ClientId);
@@ -72,11 +76,63 @@ function isEmbeddedPreview() {
   }
 }
 
+function pickAuthUser(user: AuthSessionUser | undefined): AuthSessionUser | undefined {
+  if (!user) return undefined;
+
+  return {
+    sub: user.sub,
+    name: user.name,
+    email: user.email,
+    picture: user.picture,
+  };
+}
+
+function getStoredPreviewReturnTo() {
+  if (typeof window === "undefined") return "/analisis";
+  return window.sessionStorage.getItem(AUTH0_PREVIEW_RETURN_TO_KEY) || "/analisis";
+}
+
+function rememberPreviewReturnTo(returnTo: string) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(AUTH0_PREVIEW_RETURN_TO_KEY, returnTo);
+}
+
+function clearPreviewReturnTo() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(AUTH0_PREVIEW_RETURN_TO_KEY);
+}
+
+function loadPreviewSession(): AuthSessionUser | undefined {
+  if (typeof window === "undefined") return undefined;
+
+  const raw = window.localStorage.getItem(AUTH0_PREVIEW_SESSION_KEY);
+  if (!raw) return undefined;
+
+  try {
+    const parsed = JSON.parse(raw) as AuthSessionUser;
+    return parsed.sub || parsed.email ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function savePreviewSession(user: AuthSessionUser) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH0_PREVIEW_SESSION_KEY, JSON.stringify(user));
+  window.dispatchEvent(new CustomEvent(AUTH0_PREVIEW_EVENT));
+}
+
+function clearPreviewSession() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(AUTH0_PREVIEW_SESSION_KEY);
+  window.dispatchEvent(new CustomEvent(AUTH0_PREVIEW_EVENT));
+}
+
 async function openAuthUrl(url: string) {
   if (typeof window === "undefined") return;
 
   if (isEmbeddedPreview()) {
-    const popup = window.open(url, "_blank", "noopener,noreferrer");
+    const popup = window.open(url, "gravweb-auth0-login");
     if (popup) return;
   }
 
@@ -90,9 +146,65 @@ function normalizeLocalUser(user: LocalAuthUser | null): AuthSessionUser | undef
 
 function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
   const auth0 = useAuth0();
+  const [previewUser, setPreviewUser] = useState(() => loadPreviewSession());
+
+  useEffect(() => {
+    const updatePreviewSession = () => setPreviewUser(loadPreviewSession());
+
+    window.addEventListener(AUTH0_PREVIEW_EVENT, updatePreviewSession);
+    window.addEventListener("storage", updatePreviewSession);
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      const payload = event.data as
+        | {
+            type?: string;
+            returnTo?: string;
+            user?: AuthSessionUser;
+          }
+        | undefined;
+
+      if (payload?.type !== AUTH0_PREVIEW_MESSAGE || !payload.user) return;
+
+      savePreviewSession(payload.user);
+      window.location.assign(payload.returnTo || "/analisis");
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener(AUTH0_PREVIEW_EVENT, updatePreviewSession);
+      window.removeEventListener("storage", updatePreviewSession);
+      window.removeEventListener("message", handleMessage);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!auth0.isAuthenticated || !auth0.user || isEmbeddedPreview()) return;
+    if (!window.opener || window.opener.closed) return;
+
+    const returnTo = getStoredPreviewReturnTo();
+    const user = pickAuthUser(auth0.user);
+    if (!user) return;
+
+    savePreviewSession(user);
+    clearPreviewReturnTo();
+    window.opener.postMessage(
+      {
+        type: AUTH0_PREVIEW_MESSAGE,
+        returnTo,
+        user,
+      },
+      window.location.origin
+    );
+
+    window.setTimeout(() => window.close(), 350);
+  }, [auth0.isAuthenticated, auth0.user]);
 
   const login = useCallback(
     async (options?: LoginOptions) => {
+      const returnTo = options?.returnTo ?? "/analisis";
       const authorizationParams: RedirectLoginOptions["authorizationParams"] = {};
 
       if (options?.screenHint) {
@@ -103,8 +215,12 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
         authorizationParams.audience = auth0Audience;
       }
 
+      if (isEmbeddedPreview()) {
+        rememberPreviewReturnTo(returnTo);
+      }
+
       await auth0.loginWithRedirect({
-        appState: { returnTo: options?.returnTo ?? "/analisis" },
+        appState: { returnTo },
         authorizationParams,
         openUrl: openAuthUrl,
       });
@@ -113,6 +229,7 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    clearPreviewSession();
     auth0.logout({
       logoutParams: {
         returnTo: typeof window === "undefined" ? undefined : window.location.origin,
@@ -121,17 +238,21 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
     });
   }, [auth0]);
 
+  const effectiveUser = auth0.user ?? previewUser;
+  const effectiveIsAuthenticated = auth0.isAuthenticated || Boolean(previewUser);
+  const effectiveIsLoading = auth0.isLoading && !previewUser;
+
   const value = useMemo<AuthSessionContextValue>(
     () => ({
-      user: auth0.user,
-      userId: auth0.user?.sub,
-      isAuthenticated: auth0.isAuthenticated,
-      isLoading: auth0.isLoading,
+      user: effectiveUser,
+      userId: effectiveUser?.sub || effectiveUser?.email,
+      isAuthenticated: effectiveIsAuthenticated,
+      isLoading: effectiveIsLoading,
       source: "auth0",
       login,
       logout,
     }),
-    [auth0.isAuthenticated, auth0.isLoading, auth0.user, login, logout]
+    [effectiveIsAuthenticated, effectiveIsLoading, effectiveUser, login, logout]
   );
 
   return (
@@ -186,6 +307,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     <Auth0Provider
       domain={auth0Domain}
       clientId={auth0ClientId}
+      cacheLocation="localstorage"
       useCookiesForTransactions
       authorizationParams={{
         redirect_uri: getRedirectUri(),
