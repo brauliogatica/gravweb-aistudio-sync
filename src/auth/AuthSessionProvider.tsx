@@ -44,8 +44,13 @@ interface AuthSessionContextValue {
 
 const AuthSessionContext = createContext<AuthSessionContextValue | null>(null);
 
-const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN?.trim() ?? "";
-const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID?.trim() ?? "";
+const defaultAuth0Domain = "dev-cjqveyhkp561bx8d.us.auth0.com";
+const defaultAuth0ClientId = "TXh13oNxc7PPup241n4c2Vt7gYqUDR2Y";
+
+const auth0Domain =
+  import.meta.env.VITE_AUTH0_DOMAIN?.trim() || defaultAuth0Domain;
+const auth0ClientId =
+  import.meta.env.VITE_AUTH0_CLIENT_ID?.trim() || defaultAuth0ClientId;
 const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE?.trim() ?? "";
 
 function isAuth0Enabled() {

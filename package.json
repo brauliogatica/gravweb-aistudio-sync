@@ -4,7 +4,7 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "vite --port=3000 --host=0.0.0.0 --strictPort",
     "backend:dev": "node local-backend/server.mjs",
     "processor:dev": "node local-processor/server.mjs",
     "tunnel:backend": "powershell -ExecutionPolicy Bypass -File scripts/start-backend-tunnel.ps1",
