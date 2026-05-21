@@ -12,11 +12,14 @@ La raiz del proyecto contiene la V2 minima:
 - `/analisis`: seleccion de terreno con navbar, herramientas y flujo de poligono.
 - `/particles`: terreno demo migrado con carga lazy.
 - `/proyectos`: dashboard minimo de proyectos por usuario local/dev.
+- `/login`: autenticacion local para separar terrenos por usuario.
 - `ia-studio/v1-helloworld`: snapshot historico de la V1 Hello World.
 - V4 agrega un adaptador no bloqueante para un procesador local futuro.
 - V5 agrega un backend local minimo en `local-processor/`.
 - V10 agrega un backend local file-backed en `local-backend/` para proyectos,
   auth local y orquestador stub sin Mongo.
+- V11 agrega pantalla inicial `/login` y separa proyectos por usuario local
+  antes de entrar al mapa.
 - Los datos demo de `public/demo` se guardan como `*.json.gz` para reducir
   el peso de AI Studio; el loader los descomprime en el navegador.
 
