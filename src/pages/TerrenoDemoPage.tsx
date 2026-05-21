@@ -187,6 +187,20 @@ function TerrenoDemoPage() {
     viewState,
   ]);
 
+  useEffect(() => {
+    if (demoMode || !processingRequest) return;
+    if (viewState === "processing") return;
+    if (lastProcessedRequestId === processingRequest.id) return;
+
+    processWithGrasshopper();
+  }, [
+    demoMode,
+    lastProcessedRequestId,
+    processingRequest,
+    processWithGrasshopper,
+    viewState,
+  ]);
+
   const openDemo = () => {
     navigate("/particles?demo=1");
   };
@@ -232,8 +246,9 @@ function TerrenoDemoPage() {
       error={viewState === "error" ? error : ""}
       processingRequest={processingRequest}
       onOpenDemo={openDemo}
-      onProcess={processingRequest ? processWithGrasshopper : undefined}
-      onRetry={processingRequest ? retryProcessing : undefined}
+      onRetry={
+        viewState === "error" && processingRequest ? retryProcessing : undefined
+      }
       onBack={() => navigate("/analisis")}
     />
   );

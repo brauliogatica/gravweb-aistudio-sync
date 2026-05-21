@@ -5,7 +5,7 @@ import { calcularCentroide } from "../googleEarth/puntos";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RootState } from "../../redux/store/store";
-import { updateProject } from "../../redux/slices/projectSlice";
+import { resetProject, updateProject } from "../../redux/slices/projectSlice";
 import JSZip from "jszip";
 import ImportarDatos from "../manejarDatos/ImportarDatos";
 import {
@@ -1074,10 +1074,20 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     sessionStorage.setItem("centroide", JSON.stringify(centroide));
 
     const areaSelec = sessionStorage.getItem("areaSelec");
-    const areaDecimales = parseFloat(areaSelec || "0").toFixed(2);
+    const areaNumber = parseFloat(areaSelec || "0");
+    const areaDecimales = areaNumber.toFixed(2);
+
+    dispatch(
+      resetProject({
+        userId: project.userId,
+        coordinates: coordenadas,
+        coordinatesCenter: centroide,
+        areaTerrenoM2: Number.isFinite(areaNumber) ? areaNumber : 0,
+      })
+    );
 
     // Si quieres, puedes llamar a generarMiniatura aquí:
-    generarMiniatura([coordenadas]);
+    generarMiniatura(coordenadas);
     persistProcessingRequest(coordenadas, "demo-polygon", "demo-ready");
 
     // Y actualizar el proyecto en redux:
@@ -1136,7 +1146,7 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
 
     if (!coordenadas || coordenadas.length === 0) return "";
 
-    let coords = coordenadas;
+    let coords = [...coordenadas];
 
     const first = coords[0];
     const last = coords[coords.length - 1];
@@ -1217,7 +1227,17 @@ const MapaPoligono: React.FC<MapaPoligonoProps> = ({ setActiveTab }) => {
     sessionStorage.setItem("centroide", JSON.stringify(centroide));
 
     const areaSelec = sessionStorage.getItem("areaSelec");
-    const areaDecimales = parseFloat(areaSelec || "0").toFixed(2);
+    const areaNumber = parseFloat(areaSelec || "0");
+    const areaDecimales = areaNumber.toFixed(2);
+
+    dispatch(
+      resetProject({
+        userId: project.userId,
+        coordinates: coordenadas,
+        coordinatesCenter: centroide,
+        areaTerrenoM2: Number.isFinite(areaNumber) ? areaNumber : 0,
+      })
+    );
 
     persistProcessingRequest(coordenadas, source, status);
 

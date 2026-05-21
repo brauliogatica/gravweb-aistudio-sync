@@ -540,18 +540,78 @@ button.active {
   background-color: rgba(41, 128, 185, 1);
 }
 
-#visor-proyecto {
-  width: 100%;
-  max-width: 600px;
-  min-height: 100px;
-  max-height: calc(100vh - 110px);
-  position: absolute;
-  z-index: 1000;
-  right: 50px;
-  top: 70px;
+.save-project-button {
+  background: linear-gradient(180deg, #21b8f0, #0a83c8);
+  border-color: rgba(99, 211, 255, 0.65);
+}
+
+.project-save-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 86px 36px 24px 220px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+#visor-proyecto.project-save-modal {
+  width: min(680px, calc(100vw - 260px));
+  max-height: calc(100vh - 120px);
   overflow: auto;
   padding: 16px;
-  background: rgba(248, 251, 255, 0.96);
+  background: rgba(248, 251, 255, 0.98);
+  border: 1px solid rgba(40, 93, 140, 0.25);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.34);
+}
+
+.project-save-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.project-save-header h4 {
+  margin: 0;
+}
+
+.project-save-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #e9eef5;
+  color: #1b2c3e;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.project-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#visor-proyecto img {
+  display: block;
+  width: min(480px, 100%);
+  max-height: 320px;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 760px) {
+  .project-save-backdrop {
+    justify-content: center;
+    padding: 86px 16px 24px;
+  }
+
+  #visor-proyecto.project-save-modal {
+    width: 100%;
+  }
 }
 
 #visor-proyecto pre {

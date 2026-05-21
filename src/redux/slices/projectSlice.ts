@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Project } from "../../types/types";
 
-const initialState: Project = {
+const createInitialState = (): Project => ({
   name: "",
   description: "",
   userId: "",
@@ -23,7 +23,9 @@ const initialState: Project = {
   lineasAmarillasJson: {},
   listasJson: {},
   areaTerrenoM2: 0,
-};
+});
+
+const initialState: Project = createInitialState();
 
 export const projectSlice = createSlice({
   name: "project",
@@ -31,6 +33,12 @@ export const projectSlice = createSlice({
   reducers: {
     setProject: (state, action) => {
       Object.assign(state, action.payload); // Immer se encarga de la inmutabilidad
+    },
+    resetProject: (state, action: PayloadAction<Partial<Project> | undefined>) => {
+      Object.keys(state).forEach((key) => {
+        delete state[key];
+      });
+      Object.assign(state, createInitialState(), action.payload ?? {});
     },
     updateProject: (
       state,
@@ -42,5 +50,5 @@ export const projectSlice = createSlice({
   },
 });
 
-export const { setProject, updateProject } = projectSlice.actions;
+export const { resetProject, setProject, updateProject } = projectSlice.actions;
 export default projectSlice;

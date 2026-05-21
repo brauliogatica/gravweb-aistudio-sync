@@ -6,6 +6,7 @@ import {
   getProjectById,
   getProjectsByUserId,
 } from "../../services/ProjectService";
+import { clearProcessingRequest } from "../../services/processingRequestService";
 import { setProject } from "../../redux/slices/projectSlice";
 import { Project } from "../../types/types";
 import { useCurrentUser } from "../../auth/useCurrentUser";
@@ -97,6 +98,7 @@ const ProjectList: React.FC = () => {
     try {
       setOpening(true);
       const hydratedProject = await getProjectById(selectedProject._id);
+      clearProcessingRequest();
       dispatch(setProject(hydratedProject));
       navigate("/particles");
     } catch (error) {

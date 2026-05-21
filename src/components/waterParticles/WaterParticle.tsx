@@ -112,6 +112,7 @@ const WaterParticle = () => {
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [isProjectFormOpen, setProjectFormOpen] = useState(false);
 
   // Hook para usar el componente LineasGen
   const lineasGenRef = useRef<any>(null);
@@ -2512,6 +2513,12 @@ const WaterParticle = () => {
         <button className="water-particle" onClick={reiniciar}>
           Reiniciar
         </button>
+        <button
+          className="water-particle save-project-button"
+          onClick={() => setProjectFormOpen(true)}
+        >
+          Guardar terreno
+        </button>
         <h3 className="water-particle">Controles</h3>
         <h4 className="water-particle">Vistas</h4>
         <button className="water-particle" onClick={setTopView}>PLANTA</button>
@@ -2575,12 +2582,11 @@ const WaterParticle = () => {
             id="particleCount"
             onChange={(event) => updateParticleCount(event.target.value)}
             style={{ width: "60px" }}
+            defaultValue="5000"
           >
             <option value="1000">1000</option>
             <option value="2000">2000</option>
-            <option value="5000" selected>
-              5000
-            </option>
+            <option value="5000">5000</option>
             <option value="10000">10000</option>
           </select>
         </div>
@@ -2604,12 +2610,35 @@ const WaterParticle = () => {
 
         {/* Contenedor para el gráfico de ECharts */}
         {/* <EchartsViewer setLoadingMessage={setLoadingMessage} setLoadingStyle={setLoadingStyle} /> */}
-
       </div>
-      <div id="visor-proyecto" className="card">
-        <h4>Datos del Proyecto</h4>
-        <ProjectForm />
-      </div>
+      {isProjectFormOpen && (
+        <div className="project-save-backdrop" role="presentation">
+          <div
+            id="visor-proyecto"
+            className="card project-save-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="project-save-title"
+          >
+            <div className="project-save-header">
+              <h4 id="project-save-title">Datos del Proyecto</h4>
+              <button
+                type="button"
+                className="project-save-close"
+                aria-label="Cerrar"
+                onClick={() => setProjectFormOpen(false)}
+              >
+                X
+              </button>
+            </div>
+            <ProjectForm
+              submitLabel="Guardar terreno"
+              onCancel={() => setProjectFormOpen(false)}
+              onSaved={() => setProjectFormOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       <div id="info">Gravitacional - Workspace</div>
       <div id="subtitle">

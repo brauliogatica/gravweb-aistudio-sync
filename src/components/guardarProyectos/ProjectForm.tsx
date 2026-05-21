@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createProject } from "../../services/ProjectService";
 import { Project } from "../../types/types";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,7 +6,17 @@ import { RootState } from "../../redux/store/store";
 import { updateProject } from "../../redux/slices/projectSlice";
 import { useCurrentUser } from "../../auth/useCurrentUser";
 
-const ProjectForm: React.FC = () => {
+interface ProjectFormProps {
+  onCancel?: () => void;
+  onSaved?: (project: Project) => void;
+  submitLabel?: string;
+}
+
+const ProjectForm: React.FC<ProjectFormProps> = ({
+  onCancel,
+  onSaved,
+  submitLabel = "Guardar Proyecto",
+}) => {
   const { userId } = useCurrentUser();
   const project = useSelector((state: RootState) => state.project);
   const dispatch = useDispatch();
@@ -16,6 +26,13 @@ const ProjectForm: React.FC = () => {
     name: project.name,
     description: project.description,
   });
+
+  useEffect(() => {
+    setFormData({
+      name: project.name,
+      description: project.description,
+    });
+  }, [project.description, project.name]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -71,6 +88,7 @@ const ProjectForm: React.FC = () => {
       dispatch(updateProject({ key: "updatedAt", value: savedProject.updatedAt }));
 
       setStatusMessage("Proyecto guardado.");
+      onSaved?.(savedProject);
     } catch (error) {
       console.error("Error guardando proyecto:", error);
       setStatusMessage(
@@ -131,9 +149,26 @@ const ProjectForm: React.FC = () => {
           </div>
         )}
 
-        <button onClick={saveProject} className="btn btn-success" disabled={isSaving}>
-          {isSaving ? "Guardando..." : "Guardar Proyecto"}
-        </button>
+        <div className="project-form-actions">
+          <button
+            type="button"
+            onClick={saveProject}
+            className="btn btn-success"
+            disabled={isSaving}
+          >
+            {isSaving ? "Guardando..." : submitLabel}
+          </button>
+          {onCancel && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onCancel}
+              disabled={isSaving}
+            >
+              Cancelar
+            </button>
+          )}
+        </div>
       </form>
 
       {/* <pre className="overflow-auto">{JSON.stringify(project, null, 2)};</pre> */}
