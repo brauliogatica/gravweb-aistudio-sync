@@ -24,6 +24,17 @@ Esta version convierte las 20 capas de Regrarians/Basemaps en artefactos reales 
 
 `values.length` debe coincidir con el numero de vertices del visor.
 
+## Render de colores
+
+El visor no usa una paleta unica. Cada capa declara implicitamente un modo de lectura:
+
+- Continuas: estiramiento visual por cuantiles para evitar colores lavados.
+- Categoricas: clases discretas sin interpolacion (`Rangos de pendiente`, `Formas del relieve`, `Cuencas hidrograficas`).
+- Ciclicas: `Aspecto` usa matiz circular.
+- Binarias/lineales: `Contornos` usa contraste alto para resaltar isolineas.
+
+Esto mantiene los calculos livianos y evita enviar texturas pesadas desde el backend.
+
 ## Capas
 
 | # | Capa | Metodo V12 |

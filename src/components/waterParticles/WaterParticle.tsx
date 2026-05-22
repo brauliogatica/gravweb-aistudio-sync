@@ -2005,9 +2005,23 @@ const WaterParticle = () => {
         [0.65, 0.88, 0.96],
       ],
       watersheds: [
-        [0.12, 0.44, 0.38],
-        [0.9, 0.54, 0.34],
-        [0.68, 0.38, 0.78],
+        [0.13, 0.47, 0.36],
+        [0.9, 0.52, 0.28],
+        [0.58, 0.33, 0.78],
+        [0.1, 0.48, 0.82],
+        [0.88, 0.28, 0.35],
+        [0.62, 0.68, 0.22],
+        [0.2, 0.64, 0.66],
+        [0.84, 0.66, 0.92],
+        [0.58, 0.38, 0.16],
+        [0.28, 0.72, 0.28],
+        [0.94, 0.84, 0.22],
+        [0.48, 0.58, 0.92],
+        [0.74, 0.24, 0.64],
+        [0.16, 0.28, 0.5],
+        [0.96, 0.62, 0.54],
+        [0.42, 0.78, 0.54],
+        [0.7, 0.7, 0.7],
       ],
       "wind-exposure": [
         [0.18, 0.28, 0.42],
@@ -2021,6 +2035,76 @@ const WaterParticle = () => {
       [0.42, 0.68, 0.78],
       [0.94, 0.84, 0.44],
     ];
+  };
+
+  const categoricalAnalysisClasses: Record<string, number> = {
+    "slope-ranges": 5,
+    landforms: 10,
+    watersheds: 17,
+  };
+
+  const getFiniteArtifactValues = (values: unknown[]) =>
+    values
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value))
+      .sort((a, b) => a - b);
+
+  const getQuantile = (sortedValues: number[], q: number) => {
+    if (!sortedValues.length) return 0;
+    const index = Math.min(
+      sortedValues.length - 1,
+      Math.max(0, Math.round((sortedValues.length - 1) * q))
+    );
+    return sortedValues[index];
+  };
+
+  const getArtifactDisplayRange = (layerId: string, values: unknown[]) => {
+    if (categoricalAnalysisClasses[layerId] || layerId === "aspect" || layerId === "contours") {
+      return [0, 1];
+    }
+
+    const sorted = getFiniteArtifactValues(values);
+    if (!sorted.length) return [0, 1];
+
+    const low = getQuantile(sorted, 0.02);
+    const high = getQuantile(sorted, 0.98);
+    if (Math.abs(high - low) > 0.000001) {
+      return [low, high];
+    }
+
+    return [sorted[0], sorted[sorted.length - 1] || sorted[0] + 1];
+  };
+
+  const getArtifactAnalysisColor = (
+    layerId: string,
+    normalizedValue: number,
+    rawValue: number,
+    palette: Array<[number, number, number]>
+  ) => {
+    if (layerId === "aspect") {
+      return new THREE.Color().setHSL(normalizedValue, 0.88, 0.54);
+    }
+
+    if (layerId === "contours") {
+      if (rawValue > 0.58) return new THREE.Color(0xf8fff0);
+      if (rawValue > 0.32) return new THREE.Color(0x8aa79a);
+      return new THREE.Color(0x171d20);
+    }
+
+    const classCount = categoricalAnalysisClasses[layerId];
+    if (classCount) {
+      const classIndex = Math.max(
+        0,
+        Math.min(classCount - 1, Math.round(rawValue * (classCount - 1)))
+      );
+      if (palette[classIndex]) {
+        const color = palette[classIndex];
+        return new THREE.Color(color[0], color[1], color[2]);
+      }
+      return new THREE.Color().setHSL((classIndex * 0.61803398875) % 1, 0.72, 0.52);
+    }
+
+    return interpolatePalette(normalizedValue, palette);
   };
 
   const applyScalarAnalysisArtifactLayer = (
@@ -2050,9 +2134,7 @@ const WaterParticle = () => {
 
     const normalAttribute = geometry.attributes.normal;
     const palette = getAnalysisLayerPalette(layer.id);
-    const [minValue, maxValue] = Array.isArray(artifact.valueRange)
-      ? artifact.valueRange
-      : [0, 1];
+    const [minValue, maxValue] = getArtifactDisplayRange(layer.id, artifact.values);
     const valueRange = Math.max(maxValue - minValue, 0.000001);
     const colors = new Float32Array(positionAttribute.count * 3);
     const normal = new THREE.Vector3();
@@ -2065,8 +2147,13 @@ const WaterParticle = () => {
         1
       );
       normal.fromBufferAttribute(normalAttribute, index).normalize();
-      const color = interpolatePalette(normalizedValue, palette);
-      const light = 0.72 + Math.abs(normal.z) * 0.28;
+      const color = getArtifactAnalysisColor(
+        layer.id,
+        normalizedValue,
+        rawValue,
+        palette
+      );
+      const light = layer.id === "hillshade" ? 1 : 0.9 + Math.abs(normal.z) * 0.1;
       color.multiplyScalar(light);
 
       colors[index * 3] = color.r;
@@ -2078,6 +2165,9 @@ const WaterParticle = () => {
     mesh.material.vertexColors = true;
     mesh.material.flatShading = layer.id === "polyhedral";
     mesh.material.color.set(0xffffff);
+    if (mesh.material.specular) mesh.material.specular.set(0x050505);
+    if ("shininess" in mesh.material) mesh.material.shininess = 2;
+    if (mesh.material.emissive) mesh.material.emissive.set(0x050505);
     mesh.material.needsUpdate = true;
 
     setActiveAnalysisLayerId(layer.id);

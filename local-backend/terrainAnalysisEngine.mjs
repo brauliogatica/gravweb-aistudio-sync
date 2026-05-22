@@ -492,15 +492,15 @@ function landformClass(index, fields) {
   const drainage = fields.drainage01[index];
   const height = fields.normalizedHeight[index];
 
-  if (slope < 0.12 && Math.abs(tpi - 0.5) < 0.12) return 0; // plain
-  if (tpi > 0.78 && height > 0.55) return 1; // ridge
-  if (tpi < 0.22 && drainage > 0.55) return 2; // valley
-  if (tpi > 0.65 && slope > 0.35) return 3; // spur
-  if (tpi < 0.35 && slope > 0.32) return 4; // hollow
+  if (drainage > 0.72 && tpi < 0.58) return 8; // channelized
+  if (tpi < 0.34 && drainage > 0.38) return 2; // valley
+  if (tpi < 0.42 && slope > 0.22) return 4; // hollow
+  if (tpi > 0.66 && slope > 0.3) return 1; // ridge
+  if (tpi > 0.58 && slope > 0.18) return 3; // spur
   if (slope > 0.62) return 5; // steep slope
+  if (slope < 0.16 && Math.abs(tpi - 0.5) < 0.2) return 0; // plain
   if (height > 0.72) return 6; // summit/upper slope
-  if (height < 0.25) return 7; // lowland
-  if (drainage > 0.72) return 8; // channelized
+  if (height < 0.28) return 7; // lowland
   return 9; // midslope
 }
 
@@ -509,10 +509,15 @@ function computeLayerValues(layerId, fields, payload) {
     fields;
 
   if (layerId === "contours") {
-    const interval = Math.max(finiteNumber(payload?.options?.contourIntervalM, 1.5), 0.1);
+    const zMin = Math.min(...fields.z);
+    const zMax = Math.max(...fields.z);
+    const heightRange = Math.max(zMax - zMin, 1);
+    const contourCount = Math.max(finiteNumber(payload?.options?.contourCount, 28), 8);
     const raw = fields.z.map((z) => {
-      const position = Math.abs(((z / interval) % 1 + 1) % 1 - 0.5) * 2;
-      return 1 - position;
+      const normalizedElevation = (z - zMin) / heightRange;
+      const phase = ((normalizedElevation * contourCount) % 1 + 1) % 1;
+      const distance = Math.abs(phase - 0.5) * 2;
+      return Math.pow(1 - distance, 2);
     });
     return normalizeArray(raw);
   }
