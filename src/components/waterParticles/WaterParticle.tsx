@@ -16,6 +16,13 @@ import LineasGen from "./LineasGen";
 import EchartsViewer from "./Echarts"; // Importar el nuevo componente EchartsViewer
 import BarraInferior from "./BarraInferior"; // Importar el nuevo componente BarraInferior
 import ExportarKmz from "../manejarDatos/ExportarKmz";
+import AnalysisLayersPanel, {
+  type AnalysisLayerUiState,
+} from "./AnalysisLayersPanel";
+import {
+  type TerrainAnalysisLayerDefinition,
+} from "./analysisLayerRegistry";
+import { processProjectAnalysisLayer } from "../../services/projectAnalysisService";
 
 const WaterParticle = () => {
   const project = useSelector((state: RootState) => state.project);
@@ -113,6 +120,10 @@ const WaterParticle = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isProjectFormOpen, setProjectFormOpen] = useState(false);
+  const [activeAnalysisLayerId, setActiveAnalysisLayerId] = useState("slope");
+  const [analysisLayerStates, setAnalysisLayerStates] = useState<
+    Record<string, AnalysisLayerUiState>
+  >({});
 
   // Hook para usar el componente LineasGen
   const lineasGenRef = useRef<any>(null);
@@ -1625,6 +1636,376 @@ const WaterParticle = () => {
     }, 50);
   };
 
+  const getMeshSummary = () => {
+    const mesh = currentMesh.current;
+    const geometry = mesh?.geometry;
+    const positionAttribute = geometry?.attributes?.position;
+
+    return {
+      vertexCount: positionAttribute?.count ?? 0,
+      triangleCount: geometry?.index ? Math.round(geometry.index.count / 3) : 0,
+      activeLayerId: activeAnalysisLayerId,
+      hasSlopeData: Boolean(colorData.current.slope),
+      hasConvexData: Boolean(colorData.current.convex),
+      bounds: boundingBox.current
+        ? {
+            min: boundingBox.current.min.toArray(),
+            max: boundingBox.current.max.toArray(),
+          }
+        : null,
+    };
+  };
+
+  const setAnalysisLayerMessage = (
+    layerId: string,
+    status: AnalysisLayerUiState["status"],
+    message?: string,
+    manifest?: AnalysisLayerUiState["manifest"]
+  ) => {
+    setAnalysisLayerStates((current) => ({
+      ...current,
+      [layerId]: {
+        status,
+        message,
+        manifest,
+      },
+    }));
+  };
+
+  const applyComputedVertexColors = (
+    layerId: string,
+    computeColor: (
+      vertexIndex: number,
+      point: THREE.Vector3,
+      normal: THREE.Vector3,
+      normalizedHeight: number,
+      slope01: number
+    ) => THREE.Color
+  ) => {
+    const mesh = currentMesh.current;
+    if (!mesh?.geometry) return false;
+
+    const geometry = mesh.geometry;
+    const positionAttribute = geometry.attributes.position;
+    if (!positionAttribute) return false;
+
+    if (!geometry.attributes.normal) {
+      geometry.computeVertexNormals();
+    }
+
+    const normalAttribute = geometry.attributes.normal;
+    const colors = new Float32Array(positionAttribute.count * 3);
+    const point = new THREE.Vector3();
+    const normal = new THREE.Vector3();
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+
+    for (let i = 0; i < positionAttribute.count; i++) {
+      const z = positionAttribute.getZ(i);
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
+    }
+
+    const heightRange = Math.max(maxZ - minZ, 0.000001);
+
+    for (let i = 0; i < positionAttribute.count; i++) {
+      point.fromBufferAttribute(positionAttribute, i);
+      normal.fromBufferAttribute(normalAttribute, i).normalize();
+      const normalizedHeight = (point.z - minZ) / heightRange;
+      const slope01 = THREE.MathUtils.clamp(1 - Math.abs(normal.z), 0, 1);
+      const color = computeColor(i, point, normal, normalizedHeight, slope01);
+
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+    }
+
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    mesh.material.vertexColors = true;
+    mesh.material.flatShading = layerId === "polyhedral";
+    mesh.material.color.set(0xffffff);
+    mesh.material.needsUpdate = true;
+
+    setActiveAnalysisLayerId(layerId);
+    setAnalysisLayerMessage(layerId, "ready", "Capa derivada de la malla activa.");
+    renderer.current?.render(scene.current!, camera.current!);
+    return true;
+  };
+
+  const interpolatePalette = (
+    value: number,
+    palette: Array<[number, number, number]>
+  ) => {
+    const clamped = THREE.MathUtils.clamp(value, 0, 1);
+    const scaled = clamped * (palette.length - 1);
+    const index = Math.min(Math.floor(scaled), palette.length - 2);
+    const t = scaled - index;
+    const a = palette[index];
+    const b = palette[index + 1];
+
+    return new THREE.Color(
+      THREE.MathUtils.lerp(a[0], b[0], t),
+      THREE.MathUtils.lerp(a[1], b[1], t),
+      THREE.MathUtils.lerp(a[2], b[2], t)
+    );
+  };
+
+  const applyMeshAnalysisLayer = (layer: TerrainAnalysisLayerDefinition) => {
+    setLoadingMessage(`Aplicando ${layer.label}...`);
+
+    window.setTimeout(() => {
+      const ok = (() => {
+        if (layer.id === "contours") {
+          if (!showContourLines) {
+            toggleContourLines();
+          }
+          setActiveAnalysisLayerId(layer.id);
+          setAnalysisLayerMessage(layer.id, "ready", "Overlay de contornos activo.");
+          return true;
+        }
+
+        if (layer.id === "elevation") {
+          setColorMode("uniform");
+          setActiveAnalysisLayerId(layer.id);
+          setAnalysisLayerMessage(layer.id, "ready", "Gradiente de elevacion activo.");
+          return true;
+        }
+
+        if (layer.id === "slope") {
+          setColorMode("slope");
+          setActiveAnalysisLayerId(layer.id);
+          setAnalysisLayerMessage(layer.id, "ready", "Pendiente legacy activa.");
+          return true;
+        }
+
+        if (layer.id === "morphometry") {
+          setColorMode("convex");
+          setActiveAnalysisLayerId(layer.id);
+          setAnalysisLayerMessage(layer.id, "ready", "Convexidad legacy activa.");
+          return true;
+        }
+
+        if (layer.id === "hillshade") {
+          const light = new THREE.Vector3(-0.45, -0.35, 0.82).normalize();
+          return applyComputedVertexColors(layer.id, (_i, _point, normal) => {
+            const shade = THREE.MathUtils.clamp(normal.dot(light), 0, 1);
+            const v = 0.18 + shade * 0.72;
+            return new THREE.Color(v, v, v);
+          });
+        }
+
+        if (layer.id === "aspect") {
+          return applyComputedVertexColors(layer.id, (_i, _point, normal) => {
+            const angle = (Math.atan2(normal.y, normal.x) + Math.PI) / (Math.PI * 2);
+            return new THREE.Color().setHSL(angle, 0.85, 0.52);
+          });
+        }
+
+        if (layer.id === "relief") {
+          const light = new THREE.Vector3(-0.45, -0.35, 0.82).normalize();
+          const palette: Array<[number, number, number]> = [
+            [0.04, 0.22, 0.19],
+            [0.18, 0.46, 0.23],
+            [0.62, 0.64, 0.28],
+            [0.78, 0.45, 0.18],
+            [0.74, 0.24, 0.18],
+          ];
+          return applyComputedVertexColors(layer.id, (_i, _point, normal, h) => {
+            const base = interpolatePalette(h, palette);
+            const shade = 0.65 + THREE.MathUtils.clamp(normal.dot(light), 0, 1) * 0.45;
+            return base.multiplyScalar(shade);
+          });
+        }
+
+        if (layer.id === "polyhedral") {
+          const mesh = currentMesh.current;
+          if (mesh?.material) {
+            mesh.material.flatShading = true;
+            mesh.material.needsUpdate = true;
+          }
+          return applyComputedVertexColors(layer.id, (_i, _point, normal, h) => {
+            const shade = 0.45 + Math.abs(normal.z) * 0.35 + h * 0.2;
+            return new THREE.Color(shade * 0.7, shade * 0.82, shade);
+          });
+        }
+
+        if (layer.id === "slope-ranges") {
+          const ranges = [
+            new THREE.Color(0x20603d),
+            new THREE.Color(0x6fbf4a),
+            new THREE.Color(0xd7cc48),
+            new THREE.Color(0xe8892d),
+            new THREE.Color(0xc5382a),
+          ];
+          return applyComputedVertexColors(layer.id, (_i, _point, _normal, _h, slope) => {
+            const idx = Math.min(Math.floor(slope * ranges.length), ranges.length - 1);
+            return ranges[idx].clone();
+          });
+        }
+
+        if (layer.id === "landforms") {
+          return applyComputedVertexColors(layer.id, (_i, _point, _normal, h, slope) => {
+            if (slope > 0.55) return new THREE.Color(0xb64926);
+            if (h > 0.72) return new THREE.Color(0x7d8b4c);
+            if (h < 0.22) return new THREE.Color(0x2a78a6);
+            if (slope < 0.18) return new THREE.Color(0xa9c66b);
+            return new THREE.Color(0xd8c36a);
+          });
+        }
+
+        return false;
+      })();
+
+      if (!ok) {
+        setAnalysisLayerMessage(layer.id, "failed", "No fue posible aplicar la capa.");
+      }
+
+      setLoadingMessage(null);
+    }, 40);
+  };
+
+  const applyBackendManifestPreviewLayer = (
+    layer: TerrainAnalysisLayerDefinition,
+    message = "Vista preliminar del resultado backend activa.",
+    manifest = analysisLayerStates[layer.id]?.manifest
+  ) => {
+    const palettes: Record<string, Array<[number, number, number]>> = {
+      "land-capability": [
+        [0.12, 0.36, 0.18],
+        [0.48, 0.68, 0.27],
+        [0.86, 0.72, 0.34],
+      ],
+      "erosion-risk": [
+        [0.16, 0.45, 0.3],
+        [0.86, 0.64, 0.19],
+        [0.72, 0.12, 0.1],
+      ],
+      "flow-velocity": [
+        [0.05, 0.18, 0.45],
+        [0.02, 0.7, 0.85],
+        [0.9, 0.95, 1],
+      ],
+      drainage: [
+        [0.11, 0.18, 0.36],
+        [0.12, 0.52, 0.84],
+        [0.78, 0.92, 1],
+      ],
+      twi: [
+        [0.75, 0.72, 0.56],
+        [0.22, 0.57, 0.45],
+        [0.05, 0.28, 0.58],
+      ],
+      "valley-depth": [
+        [0.74, 0.78, 0.82],
+        [0.32, 0.52, 0.72],
+        [0.08, 0.18, 0.32],
+      ],
+      viewshed: [
+        [0.18, 0.18, 0.22],
+        [0.62, 0.36, 0.78],
+        [0.98, 0.82, 0.22],
+      ],
+      flooding: [
+        [0.38, 0.42, 0.46],
+        [0.1, 0.55, 0.76],
+        [0.65, 0.88, 0.96],
+      ],
+      watersheds: [
+        [0.12, 0.44, 0.38],
+        [0.9, 0.54, 0.34],
+        [0.68, 0.38, 0.78],
+      ],
+      "wind-exposure": [
+        [0.18, 0.28, 0.42],
+        [0.55, 0.72, 0.82],
+        [0.95, 0.88, 0.52],
+      ],
+    };
+
+    const palette = palettes[layer.id] ?? [
+      [0.2, 0.32, 0.48],
+      [0.42, 0.68, 0.78],
+      [0.94, 0.84, 0.44],
+    ];
+
+    const ok = applyComputedVertexColors(
+      layer.id,
+      (_i, point, normal, h, slope) => {
+        const wave =
+          Math.sin(point.x * 0.012 + point.y * 0.009 + layer.index) * 0.5 + 0.5;
+        const value = THREE.MathUtils.clamp(h * 0.45 + slope * 0.35 + wave * 0.2, 0, 1);
+        const color = interpolatePalette(value, palette);
+        const light = 0.75 + Math.abs(normal.z) * 0.25;
+        return color.multiplyScalar(light);
+      }
+    );
+
+    if (ok) {
+      setAnalysisLayerMessage(layer.id, "ready", message, manifest);
+    }
+  };
+
+  const processBackendAnalysisLayer = async (layer: TerrainAnalysisLayerDefinition) => {
+    const projectId = project._id;
+    if (!projectId) {
+      setAnalysisLayerMessage(
+        layer.id,
+        "failed",
+        "Guarda el terreno antes de procesar esta capa pesada."
+      );
+      setProjectFormOpen(true);
+      return;
+    }
+
+    setAnalysisLayerMessage(layer.id, "processing", "Solicitando calculo backend...");
+
+    try {
+      const manifest = await processProjectAnalysisLayer(projectId, layer.id, {
+        processingRequestId: project._id,
+        meshSummary: getMeshSummary(),
+        options: {
+          layerLabel: layer.label,
+          source: "mesh-3d",
+        },
+      });
+
+      setAnalysisLayerMessage(
+        layer.id,
+        manifest.status,
+        manifest.status === "ready"
+          ? "Capa backend lista para activar."
+          : "Backend acepto la solicitud.",
+        manifest
+      );
+
+      if (manifest.status === "ready") {
+        applyBackendManifestPreviewLayer(
+          layer,
+          "Resultado backend recibido y activado.",
+          manifest
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo procesar la capa backend.";
+      setAnalysisLayerMessage(layer.id, "failed", message);
+    }
+  };
+
+  const handleActivateAnalysisLayer = (layer: TerrainAnalysisLayerDefinition) => {
+    if (layer.computeMode === "mesh") {
+      applyMeshAnalysisLayer(layer);
+      return;
+    }
+
+    const state = analysisLayerStates[layer.id];
+    if (state?.status === "ready") {
+      applyBackendManifestPreviewLayer(layer);
+    }
+  };
+
   // Función para aplicar degradado de color basado en la altura
   const applyHeightGradient = (geometry) => {
     // Obtener las posiciones de los vértices
@@ -2611,6 +2992,12 @@ const WaterParticle = () => {
         {/* Contenedor para el gráfico de ECharts */}
         {/* <EchartsViewer setLoadingMessage={setLoadingMessage} setLoadingStyle={setLoadingStyle} /> */}
       </div>
+      <AnalysisLayersPanel
+        activeLayerId={activeAnalysisLayerId}
+        layerStates={analysisLayerStates}
+        onActivateLayer={handleActivateAnalysisLayer}
+        onProcessLayer={processBackendAnalysisLayer}
+      />
       {isProjectFormOpen && (
         <div className="project-save-backdrop" role="presentation">
           <div

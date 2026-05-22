@@ -27,6 +27,7 @@ const defaultDataDir =
 
 const dataDir = process.env.GRAVWEB_BACKEND_DATA_DIR || defaultDataDir;
 const artifactsDir = path.join(dataDir, "artifacts");
+const analysisArtifactsDir = path.join(dataDir, "analysis-artifacts");
 const projectsPath = path.join(dataDir, "projects.json");
 const jobsPath = path.join(dataDir, "jobs.json");
 
@@ -113,6 +114,7 @@ function sendCorsPreflight(request, response) {
 
 async function ensureStorage() {
   await fs.mkdir(artifactsDir, { recursive: true });
+  await fs.mkdir(analysisArtifactsDir, { recursive: true });
   await ensureJsonFile(projectsPath, []);
   await ensureJsonFile(jobsPath, []);
 }
@@ -319,6 +321,84 @@ async function listJobs() {
   return readJson(jobsPath, []);
 }
 
+async function saveAnalysisArtifact(projectId, layerKey, artifact) {
+  const projectDir = path.join(analysisArtifactsDir, projectId);
+  await fs.mkdir(projectDir, { recursive: true });
+  const artifactPath = path.join(projectDir, `${layerKey}.json.gz`);
+  const compressed = await gzipAsync(JSON.stringify(artifact));
+  await fs.writeFile(artifactPath, compressed);
+  return artifactPath;
+}
+
+async function loadAnalysisArtifact(projectId, layerKey) {
+  const artifactPath = path.join(analysisArtifactsDir, projectId, `${layerKey}.json.gz`);
+  const compressed = await fs.readFile(artifactPath);
+  const raw = await gunzipAsync(compressed);
+  return JSON.parse(raw.toString("utf8"));
+}
+
+function createAnalysisManifest(projectId, layerKey, payload, artifactPath) {
+  const now = new Date().toISOString();
+  return {
+    id: `analysis-${randomUUID()}`,
+    projectId,
+    layerId: layerKey,
+    status: "ready",
+    source: "backend-stub",
+    createdAt: now,
+    updatedAt: now,
+    artifactUrl: `/project/${projectId}/analysis-layers/${layerKey}/artifact`,
+    summary: {
+      engine: "gravweb-local-backend",
+      mode: "stub-ready",
+      message:
+        "Capa registrada y lista. Reemplazar este artefacto por GDAL/GRASS/Whitebox cuando el motor este disponible.",
+      meshSummary: payload?.meshSummary ?? null,
+      options: payload?.options ?? {},
+      artifactPath: path.relative(dataDir, artifactPath),
+    },
+  };
+}
+
+async function updateProjectAnalysisManifest(projectId, layerKey, manifest) {
+  const project = await findProject(projectId);
+  if (!project) return null;
+
+  const nextManifests = {
+    ...(project.analysisManifests ?? {}),
+    [layerKey]: manifest,
+  };
+
+  const result = await updateProject(projectId, {
+    analysisManifests: nextManifests,
+  });
+
+  if (!result?.project) return null;
+  return result.project.analysisManifests ?? nextManifests;
+}
+
+async function processAnalysisLayer(projectId, layerKey, payload) {
+  const artifact = {
+    projectId,
+    layerId: layerKey,
+    createdAt: new Date().toISOString(),
+    renderer: "manifest-only",
+    values: [],
+    note:
+      "Artefacto liviano de reserva. El frontend mantiene la capa lista sin cargar datos pesados.",
+    input: payload ?? {},
+  };
+  const artifactPath = await saveAnalysisArtifact(projectId, layerKey, artifact);
+  const manifest = createAnalysisManifest(projectId, layerKey, payload, artifactPath);
+  const manifests = await updateProjectAnalysisManifest(projectId, layerKey, manifest);
+
+  if (!manifests) {
+    return { error: "Project not found." };
+  }
+
+  return { manifest };
+}
+
 async function createJob(payload, request) {
   const now = new Date().toISOString();
   const job = {
@@ -390,6 +470,7 @@ async function handleRequest(request, response) {
         "/auth/me",
         "/project",
         "/project/user/:userId",
+        "/project/:projectId/analysis-layers",
         "/orchestrator/agents",
         "/orchestrator/jobs",
       ],
@@ -447,12 +528,61 @@ async function handleRequest(request, response) {
     const id = parts[1];
 
     if (request.method === "GET") {
+      if (parts[2] === "analysis-layers" && parts.length === 3) {
+        const project = await findProject(id);
+        if (!project) {
+          sendJson(request, response, 404, { ok: false, message: "Project not found." });
+          return;
+        }
+        sendJson(request, response, 200, project.analysisManifests ?? {});
+        return;
+      }
+
+      if (
+        parts[2] === "analysis-layers" &&
+        parts[3] &&
+        parts[4] === "artifact"
+      ) {
+        try {
+          sendJson(request, response, 200, await loadAnalysisArtifact(id, parts[3]));
+        } catch {
+          sendJson(request, response, 404, {
+            ok: false,
+            message: "Analysis artifact not found.",
+          });
+        }
+        return;
+      }
+
       const project = await findProject(id);
       if (!project) {
         sendJson(request, response, 404, { ok: false, message: "Project not found." });
         return;
       }
       sendJson(request, response, 200, project);
+      return;
+    }
+
+    if (
+      request.method === "POST" &&
+      parts[2] === "analysis-layers" &&
+      parts[3] &&
+      parts[4] === "process"
+    ) {
+      const payload = await readJsonBody(request);
+      const result = await processAnalysisLayer(id, parts[3], payload);
+      if (result.error) {
+        sendJson(request, response, 404, {
+          ok: false,
+          message: result.error,
+        });
+        return;
+      }
+      sendJson(request, response, 202, {
+        ok: true,
+        jobId: `analysis-job-${randomUUID()}`,
+        manifest: result.manifest,
+      });
       return;
     }
 

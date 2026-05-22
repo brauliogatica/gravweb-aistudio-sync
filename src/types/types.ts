@@ -97,6 +97,26 @@ export interface GrasshopperTerrainResult {
   errors?: unknown[];
 }
 
+export type TerrainAnalysisLayerStatus =
+  | "idle"
+  | "queued"
+  | "processing"
+  | "ready"
+  | "failed";
+
+export interface TerrainAnalysisLayerManifest {
+  id: string;
+  projectId: string;
+  layerId: string;
+  status: TerrainAnalysisLayerStatus;
+  source: "mesh" | "backend" | "backend-stub";
+  createdAt: string;
+  updatedAt: string;
+  summary?: Record<string, unknown>;
+  artifactUrl?: string;
+  error?: string;
+}
+
 export interface Project {
   _id?: string;
   name: string;
@@ -120,4 +140,5 @@ export interface Project {
   lineasAmarillasJson: any;
   listasJson: any;
   areaTerrenoM2: number;
+  analysisManifests?: Record<string, TerrainAnalysisLayerManifest>;
 }

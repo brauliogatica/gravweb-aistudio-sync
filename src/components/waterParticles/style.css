@@ -43,6 +43,175 @@ canvas {
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   position: absolute;
 }
+
+#analysis-layer-manager {
+  position: absolute;
+  top: 20px;
+  left: 182px;
+  width: 260px;
+  max-height: calc(100vh - 95px);
+  overflow-y: auto;
+  z-index: 120;
+  padding: 10px;
+  color: #ecf0f1;
+  background: linear-gradient(to bottom, rgba(18, 31, 48, 0.96), rgba(26, 42, 62, 0.94));
+  border: 1px solid rgba(74, 160, 220, 0.35);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 11px;
+}
+
+.analysis-layer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.analysis-layer-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.analysis-layer-header span {
+  min-width: 24px;
+  padding: 2px 6px;
+  text-align: center;
+  border-radius: 999px;
+  color: #bde5ff;
+  background: rgba(41, 128, 185, 0.28);
+}
+
+.analysis-folder {
+  margin-bottom: 7px;
+  border: 1px solid rgba(41, 128, 185, 0.2);
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(7, 15, 28, 0.35);
+}
+
+.analysis-folder-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 8px;
+  color: #ffffff;
+  background: rgba(41, 128, 185, 0.35);
+  border: 0;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.analysis-folder-toggle:hover {
+  background: rgba(52, 152, 219, 0.55);
+}
+
+.analysis-folder-items {
+  padding: 6px;
+}
+
+.analysis-layer-item {
+  margin-bottom: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  background: rgba(44, 62, 80, 0.45);
+}
+
+.analysis-layer-item.active {
+  border-color: rgba(52, 196, 255, 0.85);
+  box-shadow: inset 3px 0 0 rgba(52, 196, 255, 0.85);
+}
+
+.analysis-layer-main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  color: #ecf0f1;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.analysis-layer-main:disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+
+.analysis-layer-index {
+  min-width: 22px;
+  color: #9fd7ff;
+  font-family: monospace;
+  font-size: 10px;
+}
+
+.analysis-layer-label {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.analysis-layer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.analysis-layer-status {
+  flex: 1;
+  min-width: 0;
+  color: #b7c9d9;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.analysis-layer-status.status-ready {
+  color: #8ee6a4;
+}
+
+.analysis-layer-status.status-processing {
+  color: #ffd36a;
+}
+
+.analysis-layer-status.status-failed {
+  color: #ff9b9b;
+}
+
+.analysis-layer-process {
+  padding: 4px 7px;
+  color: #ffffff;
+  background: rgba(52, 152, 219, 0.85);
+  border: 1px solid rgba(144, 211, 255, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.analysis-layer-process:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.analysis-layer-message {
+  margin: 5px 0 0;
+  color: #c8d6e1;
+  font-size: 9px;
+  line-height: 1.25;
+}
 h3.water-particle,
 h4.water-particle {
   margin: 3px 0;

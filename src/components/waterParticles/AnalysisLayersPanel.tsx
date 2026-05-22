@@ -1,0 +1,141 @@
+import React, { useMemo, useState } from "react";
+import type { TerrainAnalysisLayerManifest } from "../../types/types";
+import {
+  terrainAnalysisFolders,
+  terrainAnalysisLayers,
+  type TerrainAnalysisLayerDefinition,
+} from "./analysisLayerRegistry";
+
+export interface AnalysisLayerUiState {
+  status: TerrainAnalysisLayerManifest["status"];
+  message?: string;
+  manifest?: TerrainAnalysisLayerManifest;
+}
+
+interface AnalysisLayersPanelProps {
+  activeLayerId?: string;
+  layerStates: Record<string, AnalysisLayerUiState | undefined>;
+  onActivateLayer: (layer: TerrainAnalysisLayerDefinition) => void;
+  onProcessLayer: (layer: TerrainAnalysisLayerDefinition) => void;
+}
+
+const defaultOpenFolders = terrainAnalysisFolders.reduce<Record<string, boolean>>(
+  (result, folder) => {
+    result[folder.id] = true;
+    return result;
+  },
+  {}
+);
+
+function statusLabel(layer: TerrainAnalysisLayerDefinition, state?: AnalysisLayerUiState) {
+  if (layer.computeMode === "mesh") return "Malla";
+  if (!state || state.status === "idle") return "Backend";
+  if (state.status === "processing") return "Procesando";
+  if (state.status === "ready") return "Listo";
+  if (state.status === "failed") return "Error";
+  return state.status;
+}
+
+export default function AnalysisLayersPanel({
+  activeLayerId,
+  layerStates,
+  onActivateLayer,
+  onProcessLayer,
+}: AnalysisLayersPanelProps) {
+  const [openFolders, setOpenFolders] = useState(defaultOpenFolders);
+
+  const layersByFolder = useMemo(() => {
+    return terrainAnalysisFolders.map((folder) => ({
+      ...folder,
+      layers: terrainAnalysisLayers.filter((layer) => layer.folderId === folder.id),
+    }));
+  }, []);
+
+  return (
+    <aside id="analysis-layer-manager" aria-label="Capas de analisis">
+      <div className="analysis-layer-header">
+        <h3>Capas de analisis</h3>
+        <span>{terrainAnalysisLayers.length}</span>
+      </div>
+
+      <div className="analysis-layer-tree">
+        {layersByFolder.map((folder) => {
+          const isOpen = openFolders[folder.id];
+
+          return (
+            <section className="analysis-folder" key={folder.id}>
+              <button
+                className="analysis-folder-toggle"
+                type="button"
+                onClick={() =>
+                  setOpenFolders((current) => ({
+                    ...current,
+                    [folder.id]: !current[folder.id],
+                  }))
+                }
+              >
+                <span>{folder.label}</span>
+                <span>{isOpen ? "-" : "+"}</span>
+              </button>
+
+              {isOpen && (
+                <div className="analysis-folder-items">
+                  {folder.layers.map((layer) => {
+                    const state = layerStates[layer.id];
+                    const isActive = activeLayerId === layer.id;
+                    const canActivate =
+                      layer.computeMode === "mesh" || state?.status === "ready";
+                    const isProcessing = state?.status === "processing";
+
+                    return (
+                      <div
+                        className={`analysis-layer-item ${
+                          isActive ? "active" : ""
+                        }`}
+                        key={layer.id}
+                      >
+                        <button
+                          className="analysis-layer-main"
+                          type="button"
+                          disabled={!canActivate}
+                          title={layer.description}
+                          onClick={() => onActivateLayer(layer)}
+                        >
+                          <span className="analysis-layer-index">
+                            {String(layer.index).padStart(2, "0")}
+                          </span>
+                          <span className="analysis-layer-label">{layer.label}</span>
+                        </button>
+
+                        <div className="analysis-layer-actions">
+                          <span
+                            className={`analysis-layer-status status-${state?.status ?? "idle"}`}
+                          >
+                            {statusLabel(layer, state)}
+                          </span>
+                          {layer.computeMode === "backend" && (
+                            <button
+                              className="analysis-layer-process"
+                              type="button"
+                              disabled={isProcessing}
+                              onClick={() => onProcessLayer(layer)}
+                            >
+                              {isProcessing ? "..." : "Procesar"}
+                            </button>
+                          )}
+                        </div>
+                        {state?.message && (
+                          <p className="analysis-layer-message">{state.message}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
