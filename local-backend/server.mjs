@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzip, gunzip } from "node:zlib";
 import { promisify } from "node:util";
+import { computeTerrainAnalysisLayer } from "./terrainAnalysisEngine.mjs";
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
@@ -337,23 +338,28 @@ async function loadAnalysisArtifact(projectId, layerKey) {
   return JSON.parse(raw.toString("utf8"));
 }
 
-function createAnalysisManifest(projectId, layerKey, payload, artifactPath) {
+function createAnalysisManifest(projectId, layerKey, payload, artifactPath, artifact) {
   const now = new Date().toISOString();
   return {
     id: `analysis-${randomUUID()}`,
     projectId,
     layerId: layerKey,
     status: "ready",
-    source: "backend-stub",
+    source: "backend",
     createdAt: now,
     updatedAt: now,
     artifactUrl: `/project/${projectId}/analysis-layers/${layerKey}/artifact`,
     summary: {
       engine: "gravweb-local-backend",
-      mode: "stub-ready",
-      message:
-        "Capa registrada y lista. Reemplazar este artefacto por GDAL/GRASS/Whitebox cuando el motor este disponible.",
+      mode: "mesh-derived-v12",
+      method: artifact?.method,
+      units: artifact?.units,
+      message: "Capa calculada desde la malla 3D del proyecto.",
       meshSummary: payload?.meshSummary ?? null,
+      artifactMeshSummary: artifact?.meshSummary ?? null,
+      rawStats: artifact?.rawStats ?? null,
+      valueRange: artifact?.valueRange ?? null,
+      valueCount: Array.isArray(artifact?.values) ? artifact.values.length : 0,
       options: payload?.options ?? {},
       artifactPath: path.relative(dataDir, artifactPath),
     },
@@ -378,18 +384,32 @@ async function updateProjectAnalysisManifest(projectId, layerKey, manifest) {
 }
 
 async function processAnalysisLayer(projectId, layerKey, payload) {
-  const artifact = {
-    projectId,
-    layerId: layerKey,
-    createdAt: new Date().toISOString(),
-    renderer: "manifest-only",
-    values: [],
-    note:
-      "Artefacto liviano de reserva. El frontend mantiene la capa lista sin cargar datos pesados.",
-    input: payload ?? {},
-  };
+  const project = await findProject(projectId);
+  if (!project) {
+    return { error: "Project not found." };
+  }
+
+  let artifact;
+  try {
+    artifact = {
+      projectId,
+      input: payload ?? {},
+      ...computeTerrainAnalysisLayer(project, layerKey, payload),
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Analysis failed.",
+    };
+  }
+
   const artifactPath = await saveAnalysisArtifact(projectId, layerKey, artifact);
-  const manifest = createAnalysisManifest(projectId, layerKey, payload, artifactPath);
+  const manifest = createAnalysisManifest(
+    projectId,
+    layerKey,
+    payload,
+    artifactPath,
+    artifact
+  );
   const manifests = await updateProjectAnalysisManifest(projectId, layerKey, manifest);
 
   if (!manifests) {

@@ -8,6 +8,23 @@ export interface ProcessAnalysisLayerPayload {
   options?: Record<string, unknown>;
 }
 
+export interface TerrainAnalysisArtifact {
+  schemaVersion: string;
+  projectId: string;
+  layerId: string;
+  family?: string;
+  method?: string;
+  units?: string;
+  renderer: "mesh-scalar" | string;
+  valueBinding?: "vertex-index" | string;
+  valueRange?: [number, number];
+  values?: number[];
+  rawStats?: Record<string, unknown>;
+  meshSummary?: Record<string, unknown>;
+  scienceNotes?: string[];
+  createdAt?: string;
+}
+
 function getApiUrl() {
   if (!API_URL) {
     throw new Error("VITE_API_BASE_URL no esta configurado.");
@@ -90,6 +107,26 @@ export async function getProjectAnalysisLayers(
 
   if (!response.ok) {
     throw new Error(`No se pudieron cargar las capas: ${response.status}.`);
+  }
+
+  return response.json();
+}
+
+export async function getProjectAnalysisLayerArtifact(
+  projectId: string,
+  layerId: string
+): Promise<TerrainAnalysisArtifact> {
+  const response = await fetch(
+    `${getApiUrl()}/project/${encodeURIComponent(
+      projectId
+    )}/analysis-layers/${encodeURIComponent(layerId)}/artifact`,
+    {
+      headers: { Accept: "application/json" },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar el artefacto de analisis: ${response.status}.`);
   }
 
   return response.json();

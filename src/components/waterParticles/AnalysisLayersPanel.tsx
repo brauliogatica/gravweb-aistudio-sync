@@ -28,12 +28,13 @@ const defaultOpenFolders = terrainAnalysisFolders.reduce<Record<string, boolean>
 );
 
 function statusLabel(layer: TerrainAnalysisLayerDefinition, state?: AnalysisLayerUiState) {
+  if (state?.status === "processing") return "Procesando";
+  if (state?.status === "failed") return "Error";
+  if (state?.status === "ready" && state.manifest?.source === "backend") return "Listo";
+  if (state?.status === "ready" && state.manifest?.source === "backend-stub") return "Preview";
+  if (state?.status === "ready") return "Listo";
   if (layer.computeMode === "mesh") return "Malla";
   if (!state || state.status === "idle") return "Backend";
-  if (state.status === "processing") return "Procesando";
-  if (state.status === "ready" && state.manifest?.source === "backend-stub") return "Preview";
-  if (state.status === "ready") return "Listo";
-  if (state.status === "failed") return "Error";
   return state.status;
 }
 
@@ -118,20 +119,20 @@ export default function AnalysisLayersPanel({
                           >
                             {statusLabel(layer, state)}
                           </span>
-                          {layer.computeMode === "backend" && (
-                            <button
-                              className="analysis-layer-process"
-                              type="button"
-                              disabled={isProcessing}
-                              onClick={() => onProcessLayer(layer)}
-                            >
-                              {isProcessing
-                                ? "..."
-                                : state?.manifest?.source === "backend-stub"
-                                ? "Preview"
-                                : "Procesar"}
-                            </button>
-                          )}
+                          <button
+                            className="analysis-layer-process"
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => onProcessLayer(layer)}
+                          >
+                            {isProcessing
+                              ? "..."
+                              : state?.manifest?.source === "backend-stub"
+                              ? "Preview"
+                              : state?.manifest?.source === "backend"
+                              ? "Reprocesar"
+                              : "Procesar"}
+                          </button>
                         </div>
                         {state?.message && (
                           <p className="analysis-layer-message">{state.message}</p>
