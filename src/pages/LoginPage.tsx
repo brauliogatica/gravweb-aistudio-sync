@@ -35,6 +35,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [authError, setAuthError] = useState("");
 
   const from =
     typeof location.state === "object" &&
@@ -57,10 +58,21 @@ function LoginPage() {
   }
 
   const enterWithAuth = async (mode: "login" | "register") => {
-    await login({
-      returnTo: from,
-      screenHint: mode === "register" ? "signup" : undefined,
-    });
+    setAuthError("");
+
+    try {
+      await login({
+        returnTo: from,
+        screenHint: mode === "register" ? "signup" : undefined,
+      });
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo iniciar sesion con Auth0."
+      );
+      return;
+    }
 
     if (source === "local-dev") {
       navigate(from, { replace: true });
@@ -87,6 +99,7 @@ function LoginPage() {
             >
               Registrarse
             </button>
+            {authError && <p className="loginAuthError">{authError}</p>}
           </div>
         </div>
       </section>

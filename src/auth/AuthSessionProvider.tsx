@@ -76,6 +76,23 @@ function isEmbeddedPreview() {
   }
 }
 
+function isAiStudioRuntime() {
+  if (typeof window === "undefined") return false;
+
+  const { hostname, ancestorOrigins } = window.location;
+  const isPreviewHost =
+    hostname === "aistudio.google.com" ||
+    hostname.endsWith(".run.app") ||
+    hostname.endsWith(".googleusercontent.com");
+  const hasAiStudioAncestor =
+    Boolean(ancestorOrigins) &&
+    Array.from(ancestorOrigins).some((origin) =>
+      origin.includes("aistudio.google.com")
+    );
+
+  return isEmbeddedPreview() || isPreviewHost || hasAiStudioAncestor;
+}
+
 function pickAuthUser(user: AuthSessionUser | undefined): AuthSessionUser | undefined {
   if (!user) return undefined;
 
@@ -131,11 +148,6 @@ function clearPreviewSession() {
 async function openAuthUrl(url: string) {
   if (typeof window === "undefined") return;
 
-  if (isEmbeddedPreview()) {
-    const popup = window.open(url, "gravweb-auth0-login");
-    if (popup) return;
-  }
-
   window.location.assign(url);
 }
 
@@ -186,7 +198,7 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!auth0.isAuthenticated || !auth0.user || isEmbeddedPreview()) return;
+    if (!auth0.isAuthenticated || !auth0.user || isAiStudioRuntime()) return;
     if (!window.opener || window.opener.closed) return;
 
     const returnTo = getStoredPreviewReturnTo();
@@ -220,16 +232,19 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
         authorizationParams.audience = auth0Audience;
       }
 
-      if (isEmbeddedPreview()) {
+      if (isAiStudioRuntime()) {
         rememberPreviewReturnTo(returnTo);
 
         try {
           await auth0.loginWithPopup(
             {
-              authorizationParams,
+              authorizationParams: {
+                ...authorizationParams,
+                redirect_uri: getRedirectUri(),
+              },
             },
             {
-              timeoutInSeconds: 120,
+              timeoutInSeconds: 180,
             }
           );
 
@@ -257,8 +272,11 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
           return;
         } catch (error) {
           console.warn(
-            "Gravweb: Auth0 popup no disponible, usando redirect externo.",
+            "Gravweb: Auth0 popup no disponible en AI Studio.",
             error
+          );
+          throw new Error(
+            `Auth0 no acepto el origen de AI Studio. Agrega ${getRedirectUri()} a Allowed Callback URLs y Allowed Web Origins.`
           );
         }
       }
@@ -276,7 +294,7 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
     clearPreviewSession();
     clearPreviewReturnTo();
 
-    if (isEmbeddedPreview()) {
+    if (isAiStudioRuntime()) {
       void auth0.logout({ openUrl: false });
       if (typeof window !== "undefined") {
         window.location.replace("/login");
@@ -286,7 +304,10 @@ function Auth0SessionBridge({ children }: { children: React.ReactNode }) {
 
     auth0.logout({
       logoutParams: {
-        returnTo: typeof window === "undefined" ? undefined : window.location.origin,
+        returnTo:
+          typeof window === "undefined"
+            ? undefined
+            : `${window.location.origin}/login`,
       },
       openUrl: openUrlInCurrentWindow,
     });
