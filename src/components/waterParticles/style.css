@@ -45,19 +45,12 @@ canvas {
 }
 
 #analysis-layer-manager {
-  position: absolute;
-  top: 20px;
-  left: 182px;
-  width: 260px;
-  max-height: calc(100vh - 95px);
-  overflow-y: auto;
-  z-index: 120;
-  padding: 10px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0;
   color: #ecf0f1;
-  background: linear-gradient(to bottom, rgba(18, 31, 48, 0.96), rgba(26, 42, 62, 0.94));
-  border: 1px solid rgba(74, 160, 220, 0.35);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  background: rgba(7, 15, 28, 0.18);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
   font-family: "Segoe UI", Arial, sans-serif;
   font-size: 11px;
 }
@@ -67,25 +60,52 @@ canvas {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.analysis-layer-header h3 {
-  margin: 0;
-  font-size: 14px;
+  margin: 0 0 7px;
+  padding: 9px 4px 5px;
+  color: #bdc3c7;
+  cursor: pointer;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.5px;
+  list-style: none;
+  text-align: center;
 }
 
-.analysis-layer-header span {
+#analysis-layer-manager .analysis-layer-header::-webkit-details-marker {
+  display: none;
+}
+
+.analysis-layer-header::after {
+  content: "+";
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(144, 211, 255, 0.35);
+  border-radius: 4px;
+  color: #bde5ff;
+  background: rgba(41, 128, 185, 0.28);
+}
+
+#analysis-layer-manager[open] .analysis-layer-header::after {
+  content: "-";
+}
+
+.analysis-layer-header strong {
   min-width: 24px;
   padding: 2px 6px;
   text-align: center;
   border-radius: 999px;
   color: #bde5ff;
   background: rgba(41, 128, 185, 0.28);
+  font-size: 10px;
+}
+
+.analysis-layer-tree {
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 3px;
 }
 
 .analysis-folder {

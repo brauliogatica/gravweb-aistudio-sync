@@ -52,11 +52,11 @@ export default function AnalysisLayersPanel({
   }, []);
 
   return (
-    <aside id="analysis-layer-manager" aria-label="Capas de analisis">
-      <div className="analysis-layer-header">
-        <h3>Capas de analisis</h3>
-        <span>{terrainAnalysisLayers.length}</span>
-      </div>
+    <details id="analysis-layer-manager" aria-label="Capas de analisis">
+      <summary className="analysis-layer-header">
+        <span>Capas de analisis</span>
+        <strong>{terrainAnalysisLayers.length}</strong>
+      </summary>
 
       <div className="analysis-layer-tree">
         {layersByFolder.map((folder) => {
@@ -136,6 +136,6 @@ export default function AnalysisLayersPanel({
           );
         })}
       </div>
-    </aside>
+    </details>
   );
 }

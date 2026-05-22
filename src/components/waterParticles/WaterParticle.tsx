@@ -2991,13 +2991,13 @@ const WaterParticle = () => {
 
         {/* Contenedor para el gráfico de ECharts */}
         {/* <EchartsViewer setLoadingMessage={setLoadingMessage} setLoadingStyle={setLoadingStyle} /> */}
+        <AnalysisLayersPanel
+          activeLayerId={activeAnalysisLayerId}
+          layerStates={analysisLayerStates}
+          onActivateLayer={handleActivateAnalysisLayer}
+          onProcessLayer={processBackendAnalysisLayer}
+        />
       </div>
-      <AnalysisLayersPanel
-        activeLayerId={activeAnalysisLayerId}
-        layerStates={analysisLayerStates}
-        onActivateLayer={handleActivateAnalysisLayer}
-        onProcessLayer={processBackendAnalysisLayer}
-      />
       {isProjectFormOpen && (
         <div className="project-save-backdrop" role="presentation">
           <div

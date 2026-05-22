@@ -16,6 +16,34 @@ function getApiUrl() {
   return API_URL;
 }
 
+function createSessionFallbackManifest(
+  projectId: string,
+  layerId: string,
+  payload: ProcessAnalysisLayerPayload,
+  reason: string
+): TerrainAnalysisLayerManifest {
+  const now = new Date().toISOString();
+
+  return {
+    id: `analysis-session-${projectId}-${layerId}-${Date.now()}`,
+    projectId,
+    layerId,
+    status: "ready",
+    source: "backend-stub",
+    createdAt: now,
+    updatedAt: now,
+    summary: {
+      engine: "gravweb-frontend-session-fallback",
+      mode: "session-ready",
+      message:
+        "El backend configurado no expuso el endpoint de analisis. La capa queda disponible en esta sesion mientras se reconecta el backend local actualizado.",
+      reason,
+      meshSummary: payload.meshSummary ?? null,
+      options: payload.options ?? {},
+    },
+  };
+}
+
 export async function processProjectAnalysisLayer(
   projectId: string,
   layerId: string,
@@ -37,6 +65,10 @@ export async function processProjectAnalysisLayer(
 
   if (!response.ok) {
     const text = await response.text();
+    if (response.status === 404 && text.includes("Endpoint not found")) {
+      return createSessionFallbackManifest(projectId, layerId, payload, text.slice(0, 240));
+    }
+
     throw new Error(
       `Backend de analisis respondio ${response.status}. ${text.slice(0, 240)}`
     );
