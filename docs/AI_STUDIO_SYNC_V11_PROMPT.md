@@ -6,7 +6,7 @@ Sincroniza la app Gravweb desde la rama `main` del repositorio:
 https://github.com/brauliogatica/gravweb-aistudio-sync
 ```
 
-Commit exacto esperado:
+Base funcional V11:
 
 ```text
 30234b40d7d2435e6a46b9e9bfc389a212bb5487
@@ -18,7 +18,7 @@ Tag de respaldo:
 v11-analysis-layer-manager
 ```
 
-Nota importante: el tag `v11-analysis-layer-manager` es anotado. Si Git muestra otro hash para el objeto tag, usar igualmente el commit real `30234b40d7d2435e6a46b9e9bfc389a212bb5487`.
+Nota importante: el tag `v11-analysis-layer-manager` es anotado. Si Git muestra otro hash para el objeto tag, la base funcional V11 real es `30234b40d7d2435e6a46b9e9bfc389a212bb5487`. La rama `main` puede tener commits posteriores de documentacion sobre esa base.
 
 ## Objetivo
 
