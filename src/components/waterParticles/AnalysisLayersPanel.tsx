@@ -31,6 +31,7 @@ function statusLabel(layer: TerrainAnalysisLayerDefinition, state?: AnalysisLaye
   if (layer.computeMode === "mesh") return "Malla";
   if (!state || state.status === "idle") return "Backend";
   if (state.status === "processing") return "Procesando";
+  if (state.status === "ready" && state.manifest?.source === "backend-stub") return "Preview";
   if (state.status === "ready") return "Listo";
   if (state.status === "failed") return "Error";
   return state.status;
@@ -52,7 +53,7 @@ export default function AnalysisLayersPanel({
   }, []);
 
   return (
-    <details id="analysis-layer-manager" aria-label="Capas de analisis">
+    <details id="analysis-layer-manager" aria-label="Capas de analisis" open>
       <summary className="analysis-layer-header">
         <span>Capas de analisis</span>
         <strong>{terrainAnalysisLayers.length}</strong>
@@ -86,6 +87,10 @@ export default function AnalysisLayersPanel({
                     const canActivate =
                       layer.computeMode === "mesh" || state?.status === "ready";
                     const isProcessing = state?.status === "processing";
+                    const statusClass =
+                      state?.status === "ready" && state.manifest?.source === "backend-stub"
+                        ? "preview"
+                        : state?.status ?? "idle";
 
                     return (
                       <div
@@ -109,7 +114,7 @@ export default function AnalysisLayersPanel({
 
                         <div className="analysis-layer-actions">
                           <span
-                            className={`analysis-layer-status status-${state?.status ?? "idle"}`}
+                            className={`analysis-layer-status status-${statusClass}`}
                           >
                             {statusLabel(layer, state)}
                           </span>
@@ -120,7 +125,11 @@ export default function AnalysisLayersPanel({
                               disabled={isProcessing}
                               onClick={() => onProcessLayer(layer)}
                             >
-                              {isProcessing ? "..." : "Procesar"}
+                              {isProcessing
+                                ? "..."
+                                : state?.manifest?.source === "backend-stub"
+                                ? "Preview"
+                                : "Procesar"}
                             </button>
                           )}
                         </div>

@@ -120,6 +120,7 @@ const WaterParticle = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isProjectFormOpen, setProjectFormOpen] = useState(false);
+  const [isAnalysisLayersVisible, setAnalysisLayersVisible] = useState(false);
   const [activeAnalysisLayerId, setActiveAnalysisLayerId] = useState("slope");
   const [analysisLayerStates, setAnalysisLayerStates] = useState<
     Record<string, AnalysisLayerUiState>
@@ -1727,7 +1728,19 @@ const WaterParticle = () => {
     mesh.material.needsUpdate = true;
 
     setActiveAnalysisLayerId(layerId);
-    setAnalysisLayerMessage(layerId, "ready", "Capa derivada de la malla activa.");
+    const layerMessages: Record<string, string> = {
+      hillshade: "Sombra calculada desde normales de la malla.",
+      aspect: "Aspecto aproximado desde normales de la malla.",
+      relief: "Alivio compuesto desde elevacion y sombreado.",
+      polyhedral: "Vista facetada real de la malla.",
+      "slope-ranges": "Rangos aproximados desde normales de la malla.",
+      landforms: "Heuristica local de formas del relieve.",
+    };
+    setAnalysisLayerMessage(
+      layerId,
+      "ready",
+      layerMessages[layerId] ?? "Capa derivada de la malla activa."
+    );
     renderer.current?.render(scene.current!, camera.current!);
     return true;
   };
@@ -1772,6 +1785,15 @@ const WaterParticle = () => {
         }
 
         if (layer.id === "slope") {
+          if (!colorData.current.slope) {
+            setActiveAnalysisLayerId(layer.id);
+            setAnalysisLayerMessage(
+              layer.id,
+              "failed",
+              "Faltan colores legacy de pendiente en la malla."
+            );
+            return true;
+          }
           setColorMode("slope");
           setActiveAnalysisLayerId(layer.id);
           setAnalysisLayerMessage(layer.id, "ready", "Pendiente legacy activa.");
@@ -1779,6 +1801,15 @@ const WaterParticle = () => {
         }
 
         if (layer.id === "morphometry") {
+          if (!colorData.current.convex) {
+            setActiveAnalysisLayerId(layer.id);
+            setAnalysisLayerMessage(
+              layer.id,
+              "failed",
+              "Faltan colores legacy de convexidad en la malla."
+            );
+            return true;
+          }
           setColorMode("convex");
           setActiveAnalysisLayerId(layer.id);
           setAnalysisLayerMessage(layer.id, "ready", "Convexidad legacy activa.");
@@ -1866,7 +1897,7 @@ const WaterParticle = () => {
 
   const applyBackendManifestPreviewLayer = (
     layer: TerrainAnalysisLayerDefinition,
-    message = "Vista preliminar del resultado backend activa.",
+    message = "Vista preliminar del resultado activa.",
     manifest = analysisLayerStates[layer.id]?.manifest
   ) => {
     const palettes: Record<string, Array<[number, number, number]>> = {
@@ -1941,7 +1972,11 @@ const WaterParticle = () => {
     );
 
     if (ok) {
-      setAnalysisLayerMessage(layer.id, "ready", message, manifest);
+      const safeMessage =
+        manifest?.source === "backend-stub"
+          ? "Preview visual activada; calculo GIS real pendiente."
+          : message;
+      setAnalysisLayerMessage(layer.id, "ready", safeMessage, manifest);
     }
   };
 
@@ -1972,8 +2007,10 @@ const WaterParticle = () => {
       setAnalysisLayerMessage(
         layer.id,
         manifest.status,
-        manifest.status === "ready"
-          ? "Capa backend lista para activar."
+        manifest.status === "ready" && manifest.source === "backend-stub"
+          ? "Preview generada; calculo GIS real pendiente."
+          : manifest.status === "ready"
+          ? "Capa backend real lista para activar."
           : "Backend acepto la solicitud.",
         manifest
       );
@@ -1981,7 +2018,9 @@ const WaterParticle = () => {
       if (manifest.status === "ready") {
         applyBackendManifestPreviewLayer(
           layer,
-          "Resultado backend recibido y activado.",
+          manifest.source === "backend-stub"
+            ? "Preview backend-stub activada."
+            : "Resultado backend recibido y activado.",
           manifest
         );
       }
@@ -2798,7 +2837,19 @@ const WaterParticle = () => {
   };
 
   const toggleSuelosPanel = () => {
-    setIsSuelosVisible((prev) => !prev); // Alterna la visibilidad
+    setIsSuelosVisible((prev) => {
+      const next = !prev;
+      if (next) setAnalysisLayersVisible(false);
+      return next;
+    });
+  };
+
+  const toggleAnalysisLayersPanel = () => {
+    setAnalysisLayersVisible((prev) => {
+      const next = !prev;
+      if (next) setIsSuelosVisible(false);
+      return next;
+    });
   };
 
   const reiniciar = () => {
@@ -2991,12 +3042,6 @@ const WaterParticle = () => {
 
         {/* Contenedor para el gráfico de ECharts */}
         {/* <EchartsViewer setLoadingMessage={setLoadingMessage} setLoadingStyle={setLoadingStyle} /> */}
-        <AnalysisLayersPanel
-          activeLayerId={activeAnalysisLayerId}
-          layerStates={analysisLayerStates}
-          onActivateLayer={handleActivateAnalysisLayer}
-          onProcessLayer={processBackendAnalysisLayer}
-        />
       </div>
       {isProjectFormOpen && (
         <div className="project-save-backdrop" role="presentation">
@@ -3040,6 +3085,23 @@ const WaterParticle = () => {
       <div id="zoomIndicator"></div>
 
 
+      <div className={`analysis-drawer-container ${isAnalysisLayersVisible ? "visible" : ""}`}>
+        <button
+          id="boton-analysis-layers"
+          className="water-particle analysis-drawer-tab"
+          onClick={toggleAnalysisLayersPanel}
+        >
+          {isAnalysisLayersVisible ? ">>" : "Capas"}
+        </button>
+        <div className="analysis-drawer-panel">
+          <AnalysisLayersPanel
+            activeLayerId={activeAnalysisLayerId}
+            layerStates={analysisLayerStates}
+            onActivateLayer={handleActivateAnalysisLayer}
+            onProcessLayer={processBackendAnalysisLayer}
+          />
+        </div>
+      </div>
 
       {/* Panel deslizante */}
       <div className={`suelos-container ${isSuelosVisible ? "visible" : ""}`}>
