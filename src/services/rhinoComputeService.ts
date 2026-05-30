@@ -11,6 +11,7 @@ const RHINO_COMPUTE_URL =
 const RHINO_REQUEST_TIMEOUT_MS = Number(
   import.meta.env.VITE_RHINO_COMPUTE_TIMEOUT_MS ?? 90000
 );
+const RHINO_SOLVE_TIMEOUT_MS = Math.max(RHINO_REQUEST_TIMEOUT_MS, 180000);
 
 export interface GrasshopperRequest {
   definition: string;
@@ -179,7 +180,7 @@ export async function probeRhinoComputeRoundTrip(
       headers: getHeaders(),
       body: JSON.stringify(ioContent),
       redirect: "follow",
-    }, 30000);
+    }, RHINO_SOLVE_TIMEOUT_MS);
 
     const text = await response.text();
     const durationMs = Math.round(performance.now() - startedAt);
@@ -232,7 +233,7 @@ export async function solveTerrainWithGrasshopper(
     headers: getHeaders(),
     body: JSON.stringify(ioContent),
     redirect: "follow",
-  }, 30000);
+  }, RHINO_SOLVE_TIMEOUT_MS);
 
   if (!definitionInfo.ok) {
     throw new Error(`Rhino /io respondio con ${definitionInfo.status}.`);
