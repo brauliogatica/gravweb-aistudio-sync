@@ -14,6 +14,7 @@ const gunzipAsync = promisify(gunzip);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "..");
+const demoDir = path.join(repoRoot, "public", "demo");
 
 const host = process.env.GRAVWEB_BACKEND_HOST || "127.0.0.1";
 const port = Number(process.env.GRAVWEB_BACKEND_PORT || "3100");
@@ -90,6 +91,14 @@ function sendJson(request, response, statusCode, payload) {
     "Content-Type": "application/json; charset=utf-8",
   });
   response.end(JSON.stringify(payload, null, 2));
+}
+
+function sendText(request, response, statusCode, payload, contentType) {
+  response.writeHead(statusCode, {
+    ...corsHeaders(request),
+    "Content-Type": contentType,
+  });
+  response.end(payload);
 }
 
 function sendCorsPreflight(request, response) {
@@ -471,6 +480,34 @@ function pathParts(url) {
   return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
 }
 
+function isSafeDemoFile(fileName) {
+  return /^[a-zA-Z0-9_-]+\.json(?:\.gz)?$/.test(fileName);
+}
+
+async function readDemoJsonText(fileName) {
+  if (!isSafeDemoFile(fileName)) {
+    return null;
+  }
+
+  const normalizedName = fileName.endsWith(".gz")
+    ? fileName.slice(0, -3)
+    : fileName;
+  const gzipPath = path.join(demoDir, `${normalizedName}.gz`);
+  const plainPath = path.join(demoDir, normalizedName);
+
+  try {
+    const compressed = await fs.readFile(gzipPath);
+    const raw = await gunzipAsync(compressed);
+    return raw.toString("utf8");
+  } catch {
+    try {
+      return await fs.readFile(plainPath, "utf8");
+    } catch {
+      return null;
+    }
+  }
+}
+
 async function handleRequest(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
   const parts = pathParts(url);
@@ -495,6 +532,20 @@ async function handleRequest(request, response) {
         "/orchestrator/jobs",
       ],
     });
+    return;
+  }
+
+  if (request.method === "GET" && parts[0] === "demo" && parts[1] && parts.length === 2) {
+    const demoText = await readDemoJsonText(parts[1]);
+    if (!demoText) {
+      sendJson(request, response, 404, {
+        ok: false,
+        message: "Demo asset not found.",
+      });
+      return;
+    }
+
+    sendText(request, response, 200, demoText, "application/json; charset=utf-8");
     return;
   }
 

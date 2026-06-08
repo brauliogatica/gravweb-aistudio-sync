@@ -1,19 +1,51 @@
 import { setProject, updateProject } from "../redux/slices/projectSlice";
 
 const DEMO_BASE = "/demo";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
+
+function describeFetchError(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 async function fetchDemoText(fileName: string): Promise<string> {
-  const compressedResponse = await fetch(`${DEMO_BASE}/${fileName}.gz`);
-  if (compressedResponse.ok) {
-    return readGzipText(compressedResponse, fileName);
+  const attempts: string[] = [];
+
+  try {
+    const compressedResponse = await fetch(`${DEMO_BASE}/${fileName}.gz`);
+    if (compressedResponse.ok) {
+      return await readGzipText(compressedResponse, fileName);
+    }
+    attempts.push(`${DEMO_BASE}/${fileName}.gz -> HTTP ${compressedResponse.status}`);
+  } catch (error) {
+    attempts.push(`${DEMO_BASE}/${fileName}.gz -> ${describeFetchError(error)}`);
   }
 
-  const response = await fetch(`${DEMO_BASE}/${fileName}`);
-  if (!response.ok) {
-    throw new Error(`No se pudo cargar ${fileName}: ${response.status}`);
+  try {
+    const response = await fetch(`${DEMO_BASE}/${fileName}`);
+    if (response.ok) {
+      return await response.text();
+    }
+    attempts.push(`${DEMO_BASE}/${fileName} -> HTTP ${response.status}`);
+  } catch (error) {
+    attempts.push(`${DEMO_BASE}/${fileName} -> ${describeFetchError(error)}`);
   }
 
-  return response.text();
+  if (API_BASE) {
+    try {
+      const apiResponse = await fetch(`${API_BASE}/demo/${fileName}`, {
+        headers: { Accept: "application/json, text/plain, */*" },
+      });
+      if (apiResponse.ok) {
+        return await apiResponse.text();
+      }
+      attempts.push(`${API_BASE}/demo/${fileName} -> HTTP ${apiResponse.status}`);
+    } catch (error) {
+      attempts.push(`${API_BASE}/demo/${fileName} -> ${describeFetchError(error)}`);
+    }
+  }
+
+  throw new Error(`No se pudo cargar ${fileName}. ${attempts.join(" | ")}`);
 }
 
 async function readGzipText(response: Response, fileName: string): Promise<string> {
