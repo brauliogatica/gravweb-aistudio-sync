@@ -16,10 +16,17 @@
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
-      ]
+      ],
+      "@v2web/core": ["v2web/packages/core/src/index.ts"],
+      "@v2web/core/*": ["v2web/packages/core/src/*"],
+      "@v2web/orchestrator": ["v2web/packages/orchestrator/src/index.ts"],
+      "@v2web/tools": ["v2web/packages/tools/src/index.ts"],
+      "@v2web/representations": ["v2web/packages/representations/src/index.ts"],
+      "@v2web/rhino": ["v2web/packages/rhino/src/index.ts"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true

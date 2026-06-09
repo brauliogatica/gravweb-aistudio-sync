@@ -4,6 +4,7 @@ import MainNavbar from "./components/mainNavbar/MainNavbar";
 import AnalisisPage from "./pages/AnalisisPage";
 import LoginPage from "./pages/LoginPage";
 import ProjectsDashboardPage from "./pages/ProjectsDashboardPage";
+import V2WebPage from "./pages/V2WebPage";
 import { useCurrentUser } from "./auth/useCurrentUser";
 import "./App.css";
 
@@ -76,6 +77,14 @@ function App() {
               <Suspense fallback={<div className="text-white p-4">Cargando terreno demo...</div>}>
                 <TerrenoDemoPage />
               </Suspense>
+            </AuthenticatedShell>
+          }
+        />
+        <Route
+          path="/v2web"
+          element={
+            <AuthenticatedShell>
+              <V2WebPage />
             </AuthenticatedShell>
           }
         />

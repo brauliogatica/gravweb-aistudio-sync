@@ -30,6 +30,17 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        "@v2web/core": path.resolve(__dirname, "./v2web/packages/core/src/index.ts"),
+        "@v2web/orchestrator": path.resolve(
+          __dirname,
+          "./v2web/packages/orchestrator/src/index.ts",
+        ),
+        "@v2web/tools": path.resolve(__dirname, "./v2web/packages/tools/src/index.ts"),
+        "@v2web/representations": path.resolve(
+          __dirname,
+          "./v2web/packages/representations/src/index.ts",
+        ),
+        "@v2web/rhino": path.resolve(__dirname, "./v2web/packages/rhino/src/index.ts"),
       },
     },
   };

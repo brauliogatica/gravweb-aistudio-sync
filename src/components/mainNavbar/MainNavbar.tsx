@@ -57,6 +57,11 @@ function MainNavbar() {
                 </NavLink>
               </li>
               <li className="nav-item">
+                <NavLink className={navLinkClassName} to="/v2web">
+                  V2WEB
+                </NavLink>
+              </li>
+              <li className="nav-item">
                 <NavLink
                   className={navLinkClassName}
                   to="/particles?demo=1"

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "declaration": true,
+    "lib": ["ES2022", "DOM"],
+    "baseUrl": ".",
+    "paths": {
+      "@v2web/core": ["packages/core/src/index.ts"],
+      "@v2web/core/*": ["packages/core/src/*"],
+      "@v2web/tools": ["packages/tools/src/index.ts"],
+      "@v2web/orchestrator": ["packages/orchestrator/src/index.ts"],
+      "@v2web/representations": ["packages/representations/src/index.ts"],
+      "@v2web/rhino": ["packages/rhino/src/index.ts"]
+    }
+  },
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx"]
+}

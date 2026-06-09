@@ -1,0 +1,15 @@
+{
+  "name": "gravweb-v2web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "backend:dev": "node server/local-backend/src/server.mjs"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2",
+    "@types/node": "^22.14.0"
+  }
+}
+
